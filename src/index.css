@@ -1,14 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-jarvis-bg: #020B16;
-  --color-jarvis-bg-center: #0A1F33;
-  --color-jarvis-cyan: #00FFFF;
-  --color-jarvis-cyan-dim: #0088AA;
+  --color-jarvis-bg: #05050a;
+  --color-jarvis-bg-center: #0a1525;
+  --color-jarvis-cyan: #00d2ff;
+  --color-jarvis-cyan-dim: #0088aa;
   --color-jarvis-cyan-glow: #7DF9FF;
-  --color-jarvis-panel: #0A1525;
-  --color-jarvis-border: #1a3a5c;
-  --color-jarvis-text: #E0F7FF;
+  --color-jarvis-purple: #9d50bb;
+  --color-jarvis-panel: rgba(20, 20, 30, 0.85);
+  --color-jarvis-border: rgba(0, 210, 255, 0.25);
+  --color-jarvis-text: #ffffff;
   --color-jarvis-text-dim: #7A9AAA;
   --color-jarvis-urgent: #FF4444;
   --color-jarvis-warn: #FFAA00;
@@ -41,6 +42,16 @@
   100% { transform: translateY(100vh); }
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes radar-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
@@ -57,10 +68,42 @@
   animation: flicker 3s ease-in-out infinite;
 }
 
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-radar {
+  animation: radar-sweep 3s linear infinite;
+}
+
+/* Gradient border button */
+.gradient-border {
+  position: relative;
+  background: rgba(10, 10, 20, 0.9);
+  border-radius: 50px;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  padding: 2px;
+  background: linear-gradient(90deg, #9d50bb, #00d2ff);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.gradient-border-glow {
+  box-shadow: 0 0 15px rgba(157, 80, 187, 0.3), 0 0 30px rgba(0, 210, 255, 0.2);
+}
+
 body {
   background: radial-gradient(ellipse at center, var(--color-jarvis-bg-center) 0%, var(--color-jarvis-bg) 70%);
   color: var(--color-jarvis-text);
-  font-family: 'Segoe UI', 'Eurostile', 'Microgramma', system-ui, sans-serif;
+  font-family: 'Segoe UI', 'Eurostile', 'Microgramma', 'Orbitron', system-ui, sans-serif;
   overflow: hidden;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -76,8 +119,8 @@ body {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 212, 255, 0.03) 2px,
-    rgba(0, 212, 255, 0.03) 4px
+    rgba(0, 210, 255, 0.02) 2px,
+    rgba(0, 210, 255, 0.02) 4px
   );
   pointer-events: none;
   z-index: 10;

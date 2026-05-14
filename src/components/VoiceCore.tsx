@@ -13,14 +13,14 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
 
   const colors = {
     idle: '#0088AA',
-    listening: '#00FFFF',
+    listening: '#00d2ff',
     speaking: '#00FF88',
     thinking: '#FFAA00',
   }
 
   const glowColors = {
     idle: 'rgba(0, 136, 170, 0.3)',
-    listening: 'rgba(0, 255, 255, 0.5)',
+    listening: 'rgba(0, 210, 255, 0.5)',
     speaking: 'rgba(0, 255, 136, 0.5)',
     thinking: 'rgba(255, 170, 0, 0.5)',
   }
@@ -33,60 +33,115 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
       {/* Ambient radial glow */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
-        animate={{
-          background: `radial-gradient(circle at center, ${g} 0%, transparent 60%)`,
-        }}
+        animate={{ background: `radial-gradient(circle at center, ${g} 0%, transparent 60%)` }}
         transition={{ duration: 1.5 }}
       />
 
-      {/* Desktop side panels */}
-      <div className="hidden lg:flex absolute inset-y-0 left-0 w-64 flex-col justify-center gap-6 px-6">
-        <SystemPanel label="CPU" value="12%" bars={3} color={c} />
-        <SystemPanel label="MEMORY" value="4.2GB" bars={5} color={c} />
-        <SystemPanel label="NETWORK" value="ONLINE" bars={4} color={c} />
+      {/* Desktop corner widgets */}
+      <div className="hidden xl:flex absolute top-16 left-4 flex-col gap-3">
+        <SystemStatusPanel />
       </div>
-      <div className="hidden lg:flex absolute inset-y-0 right-0 w-64 flex-col justify-center gap-6 px-6">
-        <LogPanel color={c} />
+
+      <div className="hidden xl:flex absolute top-16 right-4 flex-col gap-3">
+        <WeatherWidget />
+      </div>
+
+      <div className="hidden xl:flex absolute bottom-16 left-4 flex-col gap-3">
+        <BatteryWidget />
+      </div>
+
+      <div className="hidden xl:flex absolute bottom-16 right-4 flex-col gap-3">
+        <EarthWidget />
+        <RadarWidget color={c} />
+      </div>
+
+      {/* Title */}
+      <div className="text-center mb-2 z-10">
+        <motion.h1
+          className="text-lg sm:text-xl lg:text-2xl font-light tracking-[0.3em] text-jarvis-cyan"
+          style={{ textShadow: '0 0 20px rgba(0, 210, 255, 0.5)' }}
+          animate={{ opacity: [0.8, 1, 0.8] }}
+          transition={{ duration: 3, repeat: Infinity }}
+        >
+          JARVIS Voice Assistant
+        </motion.h1>
+      </div>
+
+      {/* Command text box */}
+      <div className="relative mb-4 z-10">
+        <div className="flex items-center gap-2 bg-jarvis-panel/80 border border-jarvis-border rounded-xl px-4 py-2 min-w-[280px] sm:min-w-[360px]">
+          <span className="text-xs text-jarvis-text-dim">Comands, {transcript || '...'}</span>
+          <motion.span
+            className="w-0.5 h-4 bg-jarvis-cyan"
+            animate={{ opacity: [1, 0] }}
+            transition={{ duration: 0.5, repeat: Infinity }}
+          />
+          <span className="text-[10px] text-jarvis-text-dim/50 ml-auto">V2.0</span>
+        </div>
+      </div>
+
+      {/* Buttons */}
+      <div className="flex gap-3 mb-6 z-10">
+        <button className="gradient-border gradient-border-glow px-5 py-2 text-xs sm:text-sm text-white tracking-wider hover:bg-white/5 transition">
+          All Commands
+        </button>
+        <button
+          onClick={onTap}
+          className="gradient-border gradient-border-glow px-5 py-2 text-xs sm:text-sm text-jarvis-cyan tracking-wider hover:bg-white/5 transition"
+        >
+          {isListening ? 'Stop Listening' : 'Start Listening'}
+        </button>
       </div>
 
       {/* Main HUD container */}
       <div className="relative flex items-center justify-center" onClick={onTap}>
-        {/* Size responsive: 280px mobile, 360px tablet, 480px desktop */}
-        <div className="relative w-[280px] h-[280px] sm:w-[360px] sm:h-[360px] lg:w-[480px] lg:h-[480px]">
+        <div className="relative w-[260px] h-[260px] sm:w-[320px] sm:h-[320px] lg:w-[400px] lg:h-[400px]">
+          {/* Outer glow halo */}
+          <motion.div
+            className="absolute inset-[-10%] rounded-full"
+            style={{ background: `radial-gradient(circle, ${g} 0%, transparent 70%)` }}
+            animate={{ scale: isListening ? [1, 1.1, 1] : isSpeaking ? [1, 1.15, 1] : 1 }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
 
-          {/* Outer perimeter ring - thin dashed */}
-          <motion.svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 200">
+          {/* Outer thick dark ring with cyan segments */}
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="95" fill="none" stroke="#0a1a2a" strokeWidth="8" />
+            {Array.from({ length: 12 }).map((_, i) => {
+              const startAngle = i * 30 + 5
+              const endAngle = startAngle + 18
+              const r = 95
+              const toRad = (deg: number) => (deg * Math.PI) / 180
+              return (
+                <path
+                  key={i}
+                  d={`M ${100 + r * Math.cos(toRad(startAngle))} ${100 + r * Math.sin(toRad(startAngle))}
+                      A ${r} ${r} 0 0 1 ${100 + r * Math.cos(toRad(endAngle))} ${100 + r * Math.sin(toRad(endAngle))}`}
+                  fill="none" stroke={c} strokeWidth="3" opacity={0.8}
+                />
+              )
+            })}
+          </svg>
+
+          {/* Thin rotating ring */}
+          <motion.svg className="absolute inset-[5%] w-[90%] h-[90%]" viewBox="0 0 200 200">
             <motion.circle
-              cx="100" cy="100" r="95"
+              cx="100" cy="100" r="88"
               fill="none" stroke={c} strokeWidth="0.5"
-              strokeDasharray="4 8 2 12"
-              opacity={0.4}
+              strokeDasharray="20 40 10 60"
+              opacity={0.5}
               animate={{ rotate: 360 }}
-              transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+              transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
               style={{ transformOrigin: '100px 100px' }}
             />
           </motion.svg>
 
-          {/* Outer bracket segments */}
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 200">
-            {/* Top bracket */}
-            <path d="M 70 10 L 70 18 L 130 18 L 130 10" fill="none" stroke={c} strokeWidth="1.5" opacity={0.7} />
-            {/* Bottom bracket */}
-            <path d="M 70 190 L 70 182 L 130 182 L 130 190" fill="none" stroke={c} strokeWidth="1.5" opacity={0.7} />
-            {/* Left bracket */}
-            <path d="M 10 70 L 18 70 L 18 130 L 10 130" fill="none" stroke={c} strokeWidth="1.5" opacity={0.7} />
-            {/* Right bracket */}
-            <path d="M 190 70 L 182 70 L 182 130 L 190 130" fill="none" stroke={c} strokeWidth="1.5" opacity={0.7} />
-          </svg>
-
-          {/* Second ring - solid with tick marks */}
-          <motion.svg className="absolute inset-[8%] w-[84%] h-[84%]" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r="90" fill="none" stroke={c} strokeWidth="0.8" opacity={0.5} />
-            {/* Tick marks */}
-            {Array.from({ length: 60 }).map((_, i) => {
-              const angle = (i * 6 * Math.PI) / 180
-              const inner = 82
-              const outer = i % 5 === 0 ? 88 : 85
+          {/* Tick mark ring */}
+          <svg className="absolute inset-[10%] w-[80%] h-[80%]" viewBox="0 0 200 200">
+            {Array.from({ length: 48 }).map((_, i) => {
+              const angle = (i * 7.5 * Math.PI) / 180
+              const inner = 78
+              const outer = i % 6 === 0 ? 85 : 82
               return (
                 <line
                   key={i}
@@ -95,91 +150,49 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
                   x2={100 + outer * Math.cos(angle)}
                   y2={100 + outer * Math.sin(angle)}
                   stroke={c}
-                  strokeWidth={i % 5 === 0 ? 1 : 0.5}
+                  strokeWidth={i % 6 === 0 ? 1 : 0.5}
                   opacity={0.6}
-                />
-              )
-            })}
-            <motion.circle
-              cx="100" cy="100" r="90"
-              fill="none" stroke={c} strokeWidth="1"
-              strokeDasharray="60 300"
-              opacity={0.6}
-              animate={{ rotate: -360 }}
-              transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-              style={{ transformOrigin: '100px 100px' }}
-            />
-          </motion.svg>
-
-          {/* Third ring - segmented arc (left side progress blocks) */}
-          <svg className="absolute inset-[16%] w-[68%] h-[68%]" viewBox="0 0 200 200">
-            {Array.from({ length: 8 }).map((_, i) => {
-              const startAngle = 140 + i * 8
-              const endAngle = startAngle + 5
-              const r = 80
-              const toRad = (deg: number) => (deg * Math.PI) / 180
-              return (
-                <path
-                  key={i}
-                  d={`M ${100 + r * Math.cos(toRad(startAngle))} ${100 + r * Math.sin(toRad(startAngle))}
-                      A ${r} ${r} 0 0 1 ${100 + r * Math.cos(toRad(endAngle))} ${100 + r * Math.sin(toRad(endAngle))}`}
-                  fill="none" stroke={c} strokeWidth="3" opacity={0.7}
                 />
               )
             })}
           </svg>
 
-          {/* Fourth ring - inner dashed with dots */}
-          <motion.svg className="absolute inset-[22%] w-[56%] h-[56%]" viewBox="0 0 200 200">
+          {/* Inner dashed ring */}
+          <motion.svg className="absolute inset-[18%] w-[64%] h-[64%]" viewBox="0 0 200 200">
             <circle
-              cx="100" cy="100" r="75"
+              cx="100" cy="100" r="70"
               fill="none" stroke={c} strokeWidth="0.6"
-              strokeDasharray="2 6"
-              opacity={0.5}
-            />
-            {/* Dots */}
-            {Array.from({ length: 12 }).map((_, i) => {
-              const angle = (i * 30 * Math.PI) / 180
-              return (
-                <circle
-                  key={i}
-                  cx={100 + 75 * Math.cos(angle)}
-                  cy={100 + 75 * Math.sin(angle)}
-                  r="1.5"
-                  fill={c}
-                  opacity={0.8}
-                />
-              )
-            })}
-            <motion.circle
-              cx="100" cy="100" r="75"
-              fill="none" stroke={c} strokeWidth="1"
-              strokeDasharray="40 200"
+              strokeDasharray="3 9"
               opacity={0.4}
-              animate={{ rotate: 360 }}
-              transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+            />
+            <motion.circle
+              cx="100" cy="100" r="70"
+              fill="none" stroke={c} strokeWidth="1"
+              strokeDasharray="50 200"
+              opacity={0.3}
+              animate={{ rotate: -360 }}
+              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
               style={{ transformOrigin: '100px 100px' }}
             />
           </motion.svg>
 
-          {/* Inner core ring - thick with waveform notches */}
+          {/* Core */}
           <motion.div
-            className="absolute inset-[30%] rounded-full flex items-center justify-center"
+            className="absolute inset-[25%] rounded-full flex items-center justify-center"
             style={{
               border: `2px solid ${c}`,
-              boxShadow: `0 0 30px ${g}, inset 0 0 20px ${g}`,
+              boxShadow: `0 0 40px ${g}, inset 0 0 30px ${g}`,
             }}
             animate={{
               scale: isListening ? [1, 1.08, 1] : isSpeaking ? [1, 1.12, 1] : isTyping ? [1, 1.04, 1] : [1, 1.01, 1],
             }}
             transition={{ duration: 0.6, repeat: Infinity }}
           >
-            {/* Waveform notches on inner ring edge */}
             <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
-              {Array.from({ length: 20 }).map((_, i) => {
-                const angle = (i * 18 * Math.PI) / 180
-                const baseR = 48
-                const notchDepth = (isListening || isSpeaking) ? 4 + Math.sin(i * 0.8) * 3 : 2
+              {Array.from({ length: 16 }).map((_, i) => {
+                const angle = (i * 22.5 * Math.PI) / 180
+                const baseR = 46
+                const notchDepth = (isListening || isSpeaking) ? 3 + Math.sin(i * 0.7) * 2 : 1.5
                 return (
                   <line
                     key={i}
@@ -189,16 +202,15 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
                     y2={50 + (baseR + notchDepth) * Math.sin(angle)}
                     stroke={c}
                     strokeWidth="1"
-                    opacity={0.8}
+                    opacity={0.7}
                   />
                 )
               })}
             </svg>
 
-            {/* Core text */}
             <div className="text-center z-10">
               <motion.span
-                className="text-[10px] sm:text-xs lg:text-sm font-light tracking-[0.3em] text-white/90 block"
+                className="text-[9px] sm:text-[10px] lg:text-xs font-light tracking-[0.25em] text-white/90 block"
                 style={{ textShadow: `0 0 10px ${c}` }}
                 animate={{ opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 2, repeat: Infinity }}
@@ -209,11 +221,11 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
           </motion.div>
 
           {/* Right side hollow rectangles */}
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col gap-1.5">
+          <div className="absolute right-[-8%] top-1/2 -translate-y-1/2 flex flex-col gap-1">
             {Array.from({ length: 5 }).map((_, i) => (
               <motion.div
                 key={i}
-                className="w-3 h-1.5 sm:w-4 sm:h-2 border border-cyan-400/60 rounded-sm"
+                className="w-2.5 h-1.5 sm:w-3 sm:h-2 border border-jarvis-cyan/50 rounded-sm"
                 animate={{
                   opacity: (isListening || isSpeaking) ? [0.3, 1, 0.3] : 0.4,
                   borderColor: c,
@@ -225,83 +237,265 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
         </div>
       </div>
 
-      {/* Waveform bars */}
+      {/* Waveform */}
       {(isListening || isSpeaking) && (
-        <div className="flex items-end gap-1 h-8 sm:h-10 mt-4 sm:mt-6">
-          {Array.from({ length: 16 }).map((_, i) => (
+        <div className="flex items-end gap-0.5 h-6 sm:h-8 mt-4">
+          {Array.from({ length: 20 }).map((_, i) => (
             <motion.div
               key={i}
               className="w-0.5 sm:w-1 rounded-full"
               style={{ backgroundColor: c }}
-              animate={{
-                height: isListening ? [4, 24, 4] : isSpeaking ? [6, 32, 6] : 4,
-              }}
-              transition={{
-                duration: 0.4,
-                repeat: Infinity,
-                delay: i * 0.03,
-              }}
+              animate={{ height: isListening ? [3, 20, 3] : isSpeaking ? [4, 28, 4] : 3 }}
+              transition={{ duration: 0.35, repeat: Infinity, delay: i * 0.025 }}
             />
           ))}
         </div>
       )}
 
-      {/* Transcript */}
-      <div className="mt-4 sm:mt-6 px-6 text-center max-w-md">
-        <motion.p
-          className="text-sm sm:text-base text-jarvis-text-dim min-h-[2.5rem] font-light tracking-wide"
-          animate={{ opacity: transcript ? 1 : 0.5 }}
-        >
-          {transcript || (state === 'idle' ? 'Tap the core to initiate' : state === 'listening' ? 'Awaiting input...' : state === 'speaking' ? 'Transmitting response...' : 'Computing...')}
-        </motion.p>
-      </div>
-
-      {/* Bottom hint */}
-      <p className="absolute bottom-4 sm:bottom-6 text-[10px] sm:text-xs text-jarvis-text-dim/40 tracking-[0.2em] uppercase">
-        {isListening ? 'Tap to terminate' : 'Tap core to activate'}
+      {/* Bottom prompt */}
+      <p className="mt-3 text-[10px] sm:text-xs text-jarvis-text-dim/40 tracking-[0.2em] uppercase">
+        {isListening ? 'Tap to terminate' : "Say 'Hello Jarvis'"}
       </p>
-    </div>
-  )
-}
 
-function SystemPanel({ label, value, bars, color }: { label: string; value: string; bars: number; color: string }) {
-  return (
-    <div className="border-l-2 border-cyan-500/30 pl-3">
-      <div className="flex justify-between items-baseline mb-1">
-        <span className="text-[10px] tracking-[0.2em] text-jarvis-text-dim/60">{label}</span>
-        <span className="text-xs text-jarvis-cyan font-mono">{value}</span>
-      </div>
-      <div className="flex gap-1">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-1 flex-1 rounded-sm"
-            style={{
-              backgroundColor: i < bars ? color : 'rgba(0, 136, 170, 0.2)',
-              opacity: i < bars ? 0.8 : 0.3,
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function LogPanel({ color }: { color: string }) {
-  const logs = [
-    'System initialized',
-    'Voice module online',
-    'Neural network active',
-    'Awaiting command...',
-  ]
-  return (
-    <div className="border-r-2 border-cyan-500/30 pr-3 text-right">
-      <span className="text-[10px] tracking-[0.2em] text-jarvis-text-dim/60 block mb-2">SYSTEM LOG</span>
-      {logs.map((log, i) => (
-        <div key={i} className="text-[10px] text-jarvis-text-dim/50 mb-1 font-mono">
-          <span style={{ color }}>{'>'}</span> {log}
+      {/* Bottom nav dock */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+        <div className="flex items-center gap-1 sm:gap-2 bg-jarvis-panel/90 backdrop-blur-xl border border-jarvis-border/50 rounded-full px-3 py-2 sm:px-4 sm:py-2.5">
+          {[
+            { icon: CalendarIcon, label: 'Calendar' },
+            { icon: ClockIcon, label: 'Clock' },
+            { icon: BatteryIcon, label: 'Battery' },
+            { icon: CloudIcon, label: 'Weather' },
+            { icon: PowerIcon, label: 'Power' },
+          ].map(({ icon: Icon, label }) => (
+            <button
+              key={label}
+              className="p-2 sm:p-2.5 rounded-full text-jarvis-cyan/60 hover:text-jarvis-cyan hover:bg-jarvis-cyan/10 transition active:scale-90"
+              title={label}
+            >
+              <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
+  )
+}
+
+/* Corner Widget Components */
+
+function SystemStatusPanel() {
+  return (
+    <div className="bg-jarvis-panel/90 backdrop-blur-xl border border-jarvis-border/50 rounded-2xl p-4 w-56">
+      <span className="text-[10px] tracking-[0.2em] text-jarvis-text-dim/60 block mb-3">SYSTEM STATUS</span>
+
+      <div className="space-y-3">
+        <div>
+          <div className="flex justify-between text-[10px] mb-1">
+            <span className="text-jarvis-text-dim">RAM Usage</span>
+            <span className="text-jarvis-cyan font-mono">52%</span>
+          </div>
+          <div className="h-1.5 bg-jarvis-bg rounded-full overflow-hidden">
+            <div className="h-full w-[52%] bg-gradient-to-r from-jarvis-purple to-jarvis-cyan rounded-full" />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between text-[10px] mb-1">
+            <span className="text-jarvis-text-dim">Internet</span>
+            <span className="text-jarvis-success font-mono">Connected</span>
+          </div>
+          <div className="h-1.5 bg-jarvis-bg rounded-full overflow-hidden">
+            <div className="h-full w-full bg-jarvis-cyan rounded-full" />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between text-[10px] mb-1">
+            <span className="text-jarvis-text-dim">Ping</span>
+            <span className="text-jarvis-cyan font-mono">65 ms</span>
+          </div>
+          <div className="h-1.5 bg-jarvis-bg rounded-full overflow-hidden">
+            <div className="h-full w-[30%] bg-jarvis-cyan/60 rounded-full" />
+          </div>
+        </div>
+      </div>
+
+      {/* Oscilloscope graph */}
+      <div className="mt-3 h-16 border border-jarvis-border/30 rounded-lg relative overflow-hidden">
+        <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+          <path
+            d="M0 30 L10 25 L20 35 L30 20 L40 40 L50 15 L60 35 L70 25 L80 30 L90 20 L100 35 L110 25 L120 30 L130 20 L140 35 L150 25 L160 30 L170 20 L180 35 L190 25 L200 30"
+            fill="none"
+            stroke="#00d2ff"
+            strokeWidth="1"
+            opacity="0.6"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
+function WeatherWidget() {
+  return (
+    <div className="bg-jarvis-panel/90 backdrop-blur-xl border border-jarvis-border/50 rounded-2xl p-4 w-52">
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2">
+          <ThermometerIcon className="w-4 h-4 text-jarvis-warn" />
+          <span className="text-xs text-jarvis-text">25.05°C</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <CloudIcon className="w-4 h-4 text-jarvis-text-dim" />
+          <span className="text-xs text-jarvis-text-dim">scattered clouds</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <DropletIcon className="w-4 h-4 text-jarvis-cyan" />
+          <span className="text-xs text-jarvis-text-dim">85%</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <WindIcon className="w-4 h-4 text-jarvis-success" />
+          <span className="text-xs text-jarvis-text-dim">2.32 m/s</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BatteryWidget() {
+  return (
+    <div className="bg-jarvis-panel/90 backdrop-blur-xl border border-jarvis-border/50 rounded-2xl p-4 w-52">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-[10px] tracking-[0.15em] text-jarvis-text-dim">Battery</span>
+        <span className="text-[10px] text-jarvis-success">Fully Charged</span>
+      </div>
+      <div className="text-2xl font-light text-white mb-2">100%</div>
+      <div className="h-3 bg-jarvis-bg rounded-full overflow-hidden">
+        <div className="h-full w-full bg-gradient-to-r from-blue-600 to-jarvis-cyan rounded-full" />
+      </div>
+    </div>
+  )
+}
+
+function EarthWidget() {
+  return (
+    <div className="bg-jarvis-panel/90 backdrop-blur-xl border border-jarvis-border/50 rounded-2xl p-3 w-40 flex flex-col items-center">
+      <span className="text-[10px] tracking-[0.15em] text-jarvis-text-dim mb-2">Earth</span>
+      <div className="w-24 h-24 rounded-full relative overflow-hidden">
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-900 via-blue-700 to-cyan-500 opacity-80" />
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+          <path d="M20 50 Q30 30 50 35 T80 50 Q70 70 50 65 T20 50" fill="none" stroke="#00d2ff" strokeWidth="0.8" opacity="0.6" />
+          <path d="M15 40 Q25 25 45 30" fill="none" stroke="#00d2ff" strokeWidth="0.6" opacity="0.4" />
+          <path d="M55 60 Q70 75 85 65" fill="none" stroke="#00d2ff" strokeWidth="0.6" opacity="0.4" />
+        </svg>
+        <div className="absolute inset-0 rounded-full border-2 border-jarvis-cyan/30" />
+      </div>
+    </div>
+  )
+}
+
+function RadarWidget({ color }: { color: string }) {
+  return (
+    <div className="bg-jarvis-panel/90 backdrop-blur-xl border border-jarvis-border/50 rounded-2xl p-3 w-40 flex flex-col items-center">
+      <span className="text-[10px] tracking-[0.15em] text-jarvis-text-dim mb-2">Voice Signal Radar</span>
+      <div className="w-24 h-24 rounded-full relative overflow-hidden border border-jarvis-border/50">
+        <div className="absolute inset-0 rounded-full border border-jarvis-border/30" />
+        <div className="absolute inset-[20%] rounded-full border border-jarvis-border/20" />
+        <div className="absolute inset-[40%] rounded-full border border-jarvis-border/15" />
+        <div className="absolute inset-[60%] rounded-full border border-jarvis-border/10" />
+
+        {/* Crosshairs */}
+        <div className="absolute inset-x-0 top-1/2 h-px bg-jarvis-border/20" />
+        <div className="absolute inset-y-0 left-1/2 w-px bg-jarvis-border/20" />
+
+        {/* Blips */}
+        <div className="absolute w-1.5 h-1.5 rounded-full bg-jarvis-cyan top-[30%] left-[40%] animate-pulse" />
+        <div className="absolute w-1 h-1 rounded-full bg-jarvis-success top-[60%] left-[65%] animate-pulse" style={{ animationDelay: '0.5s' }} />
+        <div className="absolute w-1 h-1 rounded-full bg-jarvis-warn top-[45%] left-[25%] animate-pulse" style={{ animationDelay: '1s' }} />
+
+        {/* Sweep line */}
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            background: `conic-gradient(from 0deg, transparent 0deg, ${color}20 30deg, transparent 60deg)`,
+          }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+        />
+      </div>
+    </div>
+  )
+}
+
+/* SVG Icons */
+
+function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  )
+}
+
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  )
+}
+
+function BatteryIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="2" y="7" width="16" height="10" rx="2" />
+      <line x1="22" y1="11" x2="22" y2="13" />
+      <path d="M6 10v4" strokeWidth="2" />
+    </svg>
+  )
+}
+
+function CloudIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+    </svg>
+  )
+}
+
+function PowerIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <line x1="12" y1="2" x2="12" y2="12" />
+    </svg>
+  )
+}
+
+function ThermometerIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
+    </svg>
+  )
+}
+
+function DropletIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+    </svg>
+  )
+}
+
+function WindIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+    </svg>
   )
 }
