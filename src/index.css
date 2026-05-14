@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --color-aisha-bg: #050a14;
+  --color-aisha-panel: #0a1525;
+  --color-aisha-border: #1a3a5c;
+  --color-aisha-glow: #00d4ff;
+  --color-aisha-glow-dim: #0088aa;
+  --color-aisha-text: #e0f7ff;
+  --color-aisha-text-dim: #7a9aaa;
+  --color-aisha-urgent: #ff4444;
+  --color-aisha-warn: #ffaa00;
+  --color-aisha-success: #00ff88;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes waveform {
+  0%, 100% { height: 4px; }
+  50% { height: 32px; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-spin-slow-reverse {
+  animation: spin-slow 25s linear infinite reverse;
+}
+
+.animate-waveform {
+  animation: waveform 0.8s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+body {
+  background-color: var(--color-aisha-bg);
+  color: var(--color-aisha-text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-aisha-border);
+  border-radius: 2px;
+}
