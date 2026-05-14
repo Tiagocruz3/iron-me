@@ -16,15 +16,15 @@ const icons = {
 }
 
 const colors = {
-  approval: 'border-ironme-success/50 text-ironme-success',
-  info: 'border-ironme-glow/50 text-ironme-glow',
-  warning: 'border-ironme-warn/50 text-ironme-warn',
-  urgent: 'border-ironme-urgent/50 text-ironme-urgent',
+  approval: 'border-jarvis-success/50 text-jarvis-success',
+  info: 'border-jarvis-cyan/50 text-jarvis-cyan',
+  warning: 'border-jarvis-warn/50 text-jarvis-warn',
+  urgent: 'border-jarvis-urgent/50 text-jarvis-urgent',
 }
 
 export function NotificationStack({ notifications, onDismiss, onApproval }: Props) {
   return (
-    <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-3 z-50 pointer-events-none">
+    <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 lg:left-72 lg:right-72 flex flex-col gap-3 z-50 pointer-events-none">
       <AnimatePresence>
         {notifications.map((notif) => {
           const Icon = icons[notif.type]
@@ -35,25 +35,25 @@ export function NotificationStack({ notifications, onDismiss, onApproval }: Prop
               initial={{ y: 100, opacity: 0, scale: 0.9 }}
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 100, opacity: 0, scale: 0.9 }}
-              className={`pointer-events-auto bg-ironme-panel/95 backdrop-blur-xl border ${colorClass} rounded-2xl p-4 shadow-2xl`}
+              className={`pointer-events-auto bg-jarvis-panel/95 backdrop-blur-xl border ${colorClass} rounded-2xl p-4 shadow-2xl`}
             >
               <div className="flex items-start gap-3">
-                <Icon className="w-6 h-6 shrink-0 mt-0.5" />
+                <Icon className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm">{notif.title}</h3>
-                  <p className="text-xs text-ironme-text-dim mt-1">{notif.body}</p>
+                  <h3 className="font-semibold text-sm tracking-wide">{notif.title}</h3>
+                  <p className="text-xs text-jarvis-text-dim mt-1">{notif.body}</p>
 
                   {notif.type === 'approval' && (
                     <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => onApproval(notif, false)}
-                        className="flex-1 py-2.5 rounded-xl bg-ironme-urgent/20 text-ironme-urgent text-sm font-medium active:scale-95 transition"
+                        className="flex-1 py-3 rounded-xl bg-jarvis-urgent/15 text-jarvis-urgent text-sm font-medium active:scale-95 transition hover:bg-jarvis-urgent/25"
                       >
                         Deny
                       </button>
                       <button
                         onClick={() => onApproval(notif, true)}
-                        className="flex-1 py-2.5 rounded-xl bg-ironme-success/20 text-ironme-success text-sm font-medium active:scale-95 transition"
+                        className="flex-1 py-3 rounded-xl bg-jarvis-success/15 text-jarvis-success text-sm font-medium active:scale-95 transition hover:bg-jarvis-success/25"
                       >
                         Approve
                       </button>
@@ -62,9 +62,9 @@ export function NotificationStack({ notifications, onDismiss, onApproval }: Prop
                 </div>
                 <button
                   onClick={() => onDismiss(notif.id)}
-                  className="p-1 rounded-lg hover:bg-white/10 active:scale-90 transition"
+                  className="p-1.5 rounded-lg hover:bg-white/10 active:scale-90 transition"
                 >
-                  <X className="w-4 h-4 text-ironme-text-dim" />
+                  <X className="w-4 h-4 text-jarvis-text-dim" />
                 </button>
               </div>
             </motion.div>
