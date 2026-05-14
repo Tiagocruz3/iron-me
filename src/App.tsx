@@ -63,7 +63,7 @@ export default function App() {
   }, [stopListening, stopSpeaking])
 
   return (
-    <div className="h-screen w-screen bg-aisha-bg text-aisha-text flex flex-col overflow-hidden select-none">
+    <div className="h-screen w-screen bg-ironme-bg text-ironme-text flex flex-col overflow-hidden select-none">
       <StatusBar mode={mode} onToggleMode={() => setMode(m => m === 'voice' ? 'chat' : 'voice')} isConnected={true} />
 
       <div className="flex-1 relative">

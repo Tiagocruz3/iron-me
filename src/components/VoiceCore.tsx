@@ -95,7 +95,7 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
           whileTap={{ scale: 0.9 }}
         >
           <span className="text-4xl font-light tracking-widest text-white/90">
-            {state === 'idle' ? 'AISHA' : state === 'listening' ? '···' : state === 'speaking' ? '◆' : '◈'}
+            {state === 'idle' ? 'IRON ME' : state === 'listening' ? '···' : state === 'speaking' ? '◆' : '◈'}
           </span>
         </motion.div>
       </div>
@@ -124,7 +124,7 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
       {/* Transcript / Status text */}
       <div className="mt-6 px-8 text-center">
         <motion.p
-          className="text-lg text-aisha-text-dim min-h-[3rem]"
+          className="text-lg text-ironme-text-dim min-h-[3rem]"
           animate={{ opacity: transcript ? 1 : 0.6 }}
         >
           {transcript || (state === 'idle' ? 'Tap to speak' : state === 'listening' ? 'Listening...' : state === 'speaking' ? 'Speaking...' : 'Processing...')}
@@ -132,7 +132,7 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
       </div>
 
       {/* Bottom hint */}
-      <p className="absolute bottom-8 text-xs text-aisha-text-dim/50 tracking-wider">
+      <p className="absolute bottom-8 text-xs text-ironme-text-dim/50 tracking-wider">
         {isListening ? 'TAP TO STOP' : 'TAP TO SPEAK'}
       </p>
     </div>

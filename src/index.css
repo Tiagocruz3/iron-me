@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-aisha-bg: #050a14;
-  --color-aisha-panel: #0a1525;
-  --color-aisha-border: #1a3a5c;
-  --color-aisha-glow: #00d4ff;
-  --color-aisha-glow-dim: #0088aa;
-  --color-aisha-text: #e0f7ff;
-  --color-aisha-text-dim: #7a9aaa;
-  --color-aisha-urgent: #ff4444;
-  --color-aisha-warn: #ffaa00;
-  --color-aisha-success: #00ff88;
+  --color-ironme-bg: #050a14;
+  --color-ironme-panel: #0a1525;
+  --color-ironme-border: #1a3a5c;
+  --color-ironme-glow: #00d4ff;
+  --color-ironme-glow-dim: #0088aa;
+  --color-ironme-text: #e0f7ff;
+  --color-ironme-text-dim: #7a9aaa;
+  --color-ironme-urgent: #ff4444;
+  --color-ironme-warn: #ffaa00;
+  --color-ironme-success: #00ff88;
 }
 
 @keyframes pulse-glow {
@@ -63,8 +63,8 @@
 }
 
 body {
-  background-color: var(--color-aisha-bg);
-  color: var(--color-aisha-text);
+  background-color: var(--color-ironme-bg);
+  color: var(--color-ironme-text);
   font-family: 'Segoe UI', system-ui, sans-serif;
   overflow: hidden;
   touch-action: manipulation;
@@ -79,6 +79,6 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-aisha-border);
+  background: var(--color-ironme-border);
   border-radius: 2px;
 }
