@@ -208,13 +208,27 @@ export default function App() {
               onInterrupt={handleInterrupt}
               messages={messages}
               pushToTalk={pushToTalk}
-              onTap={() => isListening ? stopListening() : startListening()}
+              onTap={() => {
+                if (isCallActive) {
+                  if (isListening) {
+                    stopListening()
+                  } else if (isSpeaking) {
+                    stopSpeaking()
+                    setTimeout(() => startListening(), 200)
+                  } else {
+                    startListening()
+                  }
+                } else {
+                  startCall()
+                }
+              }}
+              onStartCall={startCall}
+              isCallActive={isCallActive}
             />
             <LiveCall
               isCallActive={isCallActive}
               isListening={isLiveListening}
               isSpeaking={isLiveSpeaking}
-              onStartCall={startCall}
               onEndCall={endCall}
             />
           </>

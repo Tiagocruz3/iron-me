@@ -17,6 +17,8 @@ interface VoiceCoreProps {
   messages?: Message[]
   pushToTalk?: boolean
   onTap: () => void
+  onStartCall?: () => void
+  isCallActive?: boolean
 }
 
 export function VoiceCore({ 
@@ -33,7 +35,9 @@ export function VoiceCore({
   onInterrupt,
   messages = [],
   pushToTalk,
-  onTap 
+  onTap,
+  onStartCall,
+  isCallActive
 }: VoiceCoreProps) {
   const state = isListening ? 'listening' : isSpeaking ? 'speaking' : isTyping ? 'thinking' : 'idle'
 
@@ -156,7 +160,7 @@ export function VoiceCore({
 
       {/* Main HUD */}
       <div className="relative flex items-center justify-center" onClick={onTap}>
-        <div className="relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] lg:w-[380px] lg:h-[380px]">
+        <div className="relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] lg:w-[380px] lg:h-[380px] cursor-pointer">
           <motion.div
             className="absolute inset-[-10%] rounded-full"
             style={{ background: `radial-gradient(circle, ${g} 0%, transparent 70%)` }}
@@ -277,6 +281,15 @@ export function VoiceCore({
               >
                 {state === 'idle' ? 'J.A.R.V.I.S.' : state === 'listening' ? 'LISTENING' : state === 'speaking' ? 'SPEAKING' : 'PROCESSING'}
               </motion.span>
+              {!isCallActive && !isListening && !isSpeaking && (
+                <motion.span 
+                  className="text-[7px] text-cyan-400/50 block mt-1"
+                  animate={{ opacity: [0.4, 0.8, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  TAP TO START LIVE CALL
+                </motion.span>
+              )}
             </div>
           </motion.div>
 
@@ -346,7 +359,16 @@ export function VoiceCore({
 
       {/* Bottom prompt */}
       <p className="mt-2 text-[10px] text-jarvis-text-dim/40 tracking-[0.2em] uppercase">
-        {isListening ? 'Tap to terminate' : isSpeaking ? 'Tap orb to interrupt' : conversationMode ? 'Live mode active' : "Say 'Hello Jarvis'"}
+        {isCallActive 
+          ? 'Live call active — speak freely' 
+          : isListening 
+            ? 'Tap to terminate' 
+            : isSpeaking 
+              ? 'Tap orb to interrupt' 
+              : conversationMode 
+                ? 'Live mode active' 
+                : "Say 'Hello Jarvis' or tap orb"
+        }
       </p>
 
       {/* Bottom nav dock */}
