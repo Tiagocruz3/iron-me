@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useState } from 'react'
 
 interface VoiceCoreProps {
   isListening: boolean
@@ -6,10 +7,13 @@ interface VoiceCoreProps {
   isTyping: boolean
   transcript: string
   error: string | null
+  useManualInput: boolean
+  setUseManualInput: (v: boolean) => void
+  onManualSubmit: (text: string) => void
   onTap: () => void
 }
 
-export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error, onTap }: VoiceCoreProps) {
+export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error, useManualInput, setUseManualInput, onManualSubmit, onTap }: VoiceCoreProps) {
   const state = isListening ? 'listening' : isSpeaking ? 'speaking' : isTyping ? 'thinking' : 'idle'
 
   const colors = {
@@ -91,7 +95,26 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error
         >
           {isListening ? 'Stop Listening' : 'Start Listening'}
         </button>
+        {!hasNativeSTT && (
+          <button
+            onClick={() => setUseManualInput(!useManualInput)}
+            className="gradient-border gradient-border-glow px-4 py-2 text-xs text-jarvis-warn tracking-wider hover:bg-white/5 transition"
+          >
+            {useManualInput ? 'Hide Input' : 'Type'}
+          </button>
+        )}
       </div>
+
+      {/* Manual input for Safari */}
+      {useManualInput && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="z-10 mb-4 w-full max-w-[320px]"
+        >
+          <ManualInput onSubmit={onManualSubmit} />
+        </motion.div>
+      )}
 
       {/* Main HUD */}
       <div className="relative flex items-center justify-center" onClick={onTap}>
@@ -424,6 +447,45 @@ function RadarWidget({ color }: { color: string }) {
           transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
         />
       </div>
+    </div>
+  )
+}
+
+/* Browser detection */
+const hasNativeSTT = typeof window !== 'undefined' && 
+  ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+
+/* Manual Input Component */
+function ManualInput({ onSubmit }: { onSubmit: (text: string) => void }) {
+  const [text, setText] = useState('')
+
+  return (
+    <div className="flex gap-2">
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && text.trim()) {
+            onSubmit(text.trim())
+            setText('')
+          }
+        }}
+        placeholder="Type command..."
+        autoFocus
+        className="flex-1 bg-jarvis-panel border border-jarvis-border rounded-lg px-3 py-2 text-xs text-jarvis-text placeholder:text-jarvis-text-dim/40 focus:outline-none focus:border-jarvis-cyan/50"
+      />
+      <button
+        onClick={() => {
+          if (text.trim()) {
+            onSubmit(text.trim())
+            setText('')
+          }
+        }}
+        className="px-3 py-2 rounded-lg bg-jarvis-cyan/15 text-jarvis-cyan text-xs hover:bg-jarvis-cyan/25 transition"
+      >
+        Send
+      </button>
     </div>
   )
 }

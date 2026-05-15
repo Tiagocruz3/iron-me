@@ -11,24 +11,31 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [useManualInput, setUseManualInput] = useState(false)
   const recognitionRef = useRef<any>(null)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const isListeningRef = useRef(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+
+  // Check browser support
+  const hasNativeSTT = typeof window !== 'undefined' && 
+    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
 
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) {
-      setError('Speech recognition not supported in this browser')
+    if (!hasNativeSTT) {
+      setError('Safari detected. Using server-side STT or manual input.')
       return
     }
 
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     const rec = new SpeechRecognition()
     rec.continuous = true
     rec.interimResults = true
     rec.lang = 'en-US'
 
     rec.onstart = () => {
-      console.log('[STT] Recognition started')
+      console.log('[STT] Native recognition started')
       isListeningRef.current = true
       setIsListening(true)
       setError(null)
@@ -46,7 +53,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
         }
       }
       if (final) {
-        console.log('[STT] Final transcript:', final)
+        console.log('[STT] Final:', final)
         setTranscript(final)
         onTranscript(final)
       } else {
@@ -57,59 +64,109 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
     rec.onerror = (e: any) => {
       console.error('[STT] Error:', e.error)
       if (e.error === 'not-allowed') {
-        setError('Microphone permission denied. Please allow mic access.')
+        setError('Microphone permission denied.')
       } else if (e.error === 'no-speech') {
-        setError('No speech detected. Try again.')
-      } else {
-        setError(`Speech error: ${e.error}`)
+        setError('No speech detected.')
       }
       isListeningRef.current = false
       setIsListening(false)
     }
 
     rec.onend = () => {
-      console.log('[STT] Recognition ended. wasListening:', isListeningRef.current)
-      // Only auto-restart if we intentionally want to keep listening
       if (isListeningRef.current) {
-        try {
-          rec.start()
-        } catch {
-          isListeningRef.current = false
-          setIsListening(false)
-        }
+        try { rec.start() } catch { isListeningRef.current = false; setIsListening(false) }
       } else {
         setIsListening(false)
       }
     }
 
     recognitionRef.current = rec
+  }, [onTranscript, hasNativeSTT])
+
+  // Server-side STT via Deepgram (for Safari)
+  const startServerSTT = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const reader = new FileReader()
+        reader.readAsDataURL(audioBlob)
+        reader.onloadend = async () => {
+          const base64 = (reader.result as string).split(',')[1]
+          try {
+            const res = await fetch('/api/stt', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ audio: base64 }),
+            })
+            const data = await res.json()
+            if (data.transcript) {
+              setTranscript(data.transcript)
+              onTranscript(data.transcript)
+            }
+          } catch {
+            setError('STT failed. Try manual input.')
+          }
+          setIsListening(false)
+        }
+      }
+
+      mediaRecorder.start()
+      setIsListening(true)
+      setError(null)
+
+      // Auto-stop after 5 seconds
+      setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop()
+          stream.getTracks().forEach(t => t.stop())
+        }
+      }, 5000)
+    } catch {
+      setError('Microphone access denied.')
+      setIsListening(false)
+    }
   }, [onTranscript])
 
   const startListening = useCallback(() => {
-    console.log('[STT] startListening called')
     setTranscript('')
     setError(null)
-    isListeningRef.current = true
-    try {
-      recognitionRef.current?.start()
-    } catch (e: any) {
-      console.error('[STT] start failed:', e.message)
-      // Already started — do nothing
+
+    if (hasNativeSTT) {
+      isListeningRef.current = true
+      try {
+        recognitionRef.current?.start()
+      } catch {
+        // Already started
+      }
+    } else {
+      startServerSTT()
     }
-  }, [])
+  }, [hasNativeSTT, startServerSTT])
 
   const stopListening = useCallback(() => {
-    console.log('[STT] stopListening called')
     isListeningRef.current = false
     try {
       recognitionRef.current?.stop()
     } catch {}
+
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop()
+      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop())
+    }
+
     setIsListening(false)
   }, [])
 
   const speak = useCallback(async (text: string) => {
-    const voiceId = 'Q7IOSFX7VG3cnK4eU8Z4'
-
     setIsSpeaking(true)
     onSpeakingStart()
 
@@ -117,7 +174,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voiceId }),
+        body: JSON.stringify({ text, voiceId: 'Q7IOSFX7VG3cnK4eU8Z4' }),
       })
 
       if (res.ok && res.headers.get('content-type')?.includes('audio')) {
@@ -125,20 +182,12 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
         const url = URL.createObjectURL(blob)
         const audio = new Audio(url)
         currentAudioRef.current = audio
-        audio.onended = () => {
-          setIsSpeaking(false)
-          onSpeakingEnd()
-          URL.revokeObjectURL(url)
-        }
-        audio.onerror = () => {
-          setIsSpeaking(false)
-          onSpeakingEnd()
-        }
+        audio.onended = () => { setIsSpeaking(false); onSpeakingEnd(); URL.revokeObjectURL(url) }
+        audio.onerror = () => { setIsSpeaking(false); onSpeakingEnd() }
         await audio.play()
         return
       }
-
-      throw new Error('Server TTS unavailable')
+      throw new Error('TTS failed')
     } catch {
       const utter = new SpeechSynthesisUtterance(text)
       utter.rate = 1.1
@@ -157,5 +206,16 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
     onSpeakingEnd()
   }, [onSpeakingEnd])
 
-  return { isListening, isSpeaking, transcript, error, startListening, stopListening, speak, stopSpeaking }
+  return { 
+    isListening, 
+    isSpeaking, 
+    transcript, 
+    error,
+    useManualInput,
+    setUseManualInput,
+    startListening, 
+    stopListening, 
+    speak, 
+    stopSpeaking 
+  }
 }
