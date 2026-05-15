@@ -19,8 +19,50 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
   const isListeningRef = useRef(false)
   const silenceTimeoutRef = useRef<any>(null)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
+  const callActiveRef = useRef(false)
 
   const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'Q7IOSFX7VG3cnK4eU8Z4'
+
+  // Sound effects
+  const playSound = useCallback((type: 'start' | 'stop' | 'chime') => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      if (type === 'start') {
+        osc.frequency.setValueAtTime(523, ctx.currentTime)
+        gain.gain.setValueAtTime(0.08, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.2)
+        const osc2 = ctx.createOscillator()
+        const gain2 = ctx.createGain()
+        osc2.connect(gain2)
+        gain2.connect(ctx.destination)
+        osc2.frequency.setValueAtTime(659, ctx.currentTime + 0.1)
+        gain2.gain.setValueAtTime(0.08, ctx.currentTime + 0.1)
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
+        osc2.start(ctx.currentTime + 0.1)
+        osc2.stop(ctx.currentTime + 0.3)
+      } else if (type === 'stop') {
+        osc.frequency.setValueAtTime(440, ctx.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.15)
+        gain.gain.setValueAtTime(0.08, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.15)
+      } else if (type === 'chime') {
+        osc.frequency.setValueAtTime(880, ctx.currentTime)
+        gain.gain.setValueAtTime(0.06, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.15)
+      }
+    } catch {}
+  }, [])
 
   // Initialize speech recognition
   useEffect(() => {
@@ -66,7 +108,6 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
         clearTimeout(silenceTimeoutRef.current)
       }
       silenceTimeoutRef.current = setTimeout(() => {
-        // Auto-stop listening after 2s silence
         if (isListeningRef.current) {
           rec.stop()
         }
@@ -77,16 +118,23 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
       if (e.error === 'not-allowed') {
         setError('Microphone permission denied')
       } else if (e.error === 'no-speech') {
-        // Auto-restart
-        if (isListeningRef.current) {
-          setTimeout(() => rec.start(), 500)
+        if (isListeningRef.current && callActiveRef.current) {
+          setTimeout(() => {
+            try { rec.start() } catch {}
+          }, 500)
         }
+      } else if (e.error === 'network') {
+        // Auto-restart on network error
+        setTimeout(() => {
+          if (isListeningRef.current && callActiveRef.current) {
+            try { rec.start() } catch {}
+          }
+        }, 1000)
       }
     }
 
     rec.onend = () => {
-      if (isListeningRef.current && isCallActive) {
-        // Restart listening for next turn
+      if (isListeningRef.current && callActiveRef.current) {
         setTimeout(() => {
           try { rec.start() } catch {}
         }, 300)
@@ -96,19 +144,20 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
     }
 
     recognitionRef.current = rec
-  }, [onTranscript, isCallActive])
+  }, [onTranscript])
 
   // Start live call
   const startCall = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       mediaStreamRef.current = stream
-
-      // Initialize audio context for processing
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
 
       setIsCallActive(true)
+      callActiveRef.current = true
       isListeningRef.current = true
+
+      playSound('start')
 
       // Start listening
       setTimeout(() => {
@@ -118,11 +167,12 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
     } catch {
       setError('Microphone access denied')
     }
-  }, [])
+  }, [playSound])
 
   // End call
   const endCall = useCallback(() => {
     isListeningRef.current = false
+    callActiveRef.current = false
     setIsCallActive(false)
     setIsListening(false)
     setIsSpeaking(false)
@@ -139,11 +189,13 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
     currentAudioRef.current?.pause()
     currentAudioRef.current = null
     speechSynthesis.cancel()
-  }, [])
+
+    playSound('stop')
+  }, [playSound])
 
   // Speak response (interruptible)
   const speak = useCallback(async (text: string) => {
-    if (!isCallActive) return
+    if (!callActiveRef.current) return
 
     setIsSpeaking(true)
     onSpeakingStart()
@@ -166,7 +218,7 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
           onSpeakingEnd()
           URL.revokeObjectURL(url)
           // Auto-restart listening after speaking
-          if (isCallActive) {
+          if (callActiveRef.current) {
             setTimeout(() => {
               try { recognitionRef.current?.start() } catch {}
             }, 300)
@@ -183,12 +235,11 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
       }
       throw new Error('TTS failed')
     } catch {
-      // Fallback
       const utter = new SpeechSynthesisUtterance(text)
       utter.onend = () => {
         setIsSpeaking(false)
         onSpeakingEnd()
-        if (isCallActive) {
+        if (callActiveRef.current) {
           setTimeout(() => {
             try { recognitionRef.current?.start() } catch {}
           }, 300)
@@ -196,7 +247,7 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
       }
       speechSynthesis.speak(utter)
     }
-  }, [onSpeakingStart, onSpeakingEnd, voiceId, isCallActive])
+  }, [onSpeakingStart, onSpeakingEnd, voiceId])
 
   // Interrupt speaking
   const interrupt = useCallback(() => {
