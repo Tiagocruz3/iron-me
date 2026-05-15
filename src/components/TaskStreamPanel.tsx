@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Terminal, X, ChevronDown, ChevronUp } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 interface TaskLog {
   type: 'stdout' | 'stderr'

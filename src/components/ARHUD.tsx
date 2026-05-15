@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Scan, Crosshair, AlertTriangle, Box, Users, Car, Shield, Camera, Grid3X3, Target, Eye, Activity } from 'lucide-react'
+import { Scan, Crosshair, AlertTriangle, Box, Users, Car, Shield, Camera, Grid3X3, Target, Eye, Activity, X } from 'lucide-react'
 
 interface DetectedObject {
   id: string

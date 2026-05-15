@@ -57,7 +57,7 @@ export function StatusBar({ mode, onToggleMode, isConnected, conversationMode, o
         <span className="text-xs sm:text-sm font-light text-jarvis-text font-mono">{time}</span>
 
         <button
-          onClick={() => setMode(m => m === 'voice' ? 'chat' : m === 'chat' ? 'ar' : 'voice')}
+          onClick={onToggleMode}
           className="p-2 sm:p-2.5 rounded-xl bg-jarvis-panel border border-jarvis-border/50 text-jarvis-cyan active:scale-90 transition hover:border-jarvis-cyan/50"
         >
           {mode === 'voice' ? <MessageSquare className="w-4 h-4" /> : mode === 'chat' ? <Eye className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
