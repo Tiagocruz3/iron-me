@@ -12,17 +12,121 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
   const [transcript, setTranscript] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [useManualInput, setUseManualInput] = useState(false)
+  const [isProcessingSTT, setIsProcessingSTT] = useState(false)
   const recognitionRef = useRef<any>(null)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const isListeningRef = useRef(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const silenceTimerRef = useRef<any>(null)
+  const vadActiveRef = useRef(false)
 
   const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'Q7IOSFX7VG3cnK4eU8Z4'
 
-  // Check browser support
   const hasNativeSTT = typeof window !== 'undefined' && 
     ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+
+  // Sound effects using Web Audio API
+  const playSound = useCallback((type: 'start' | 'stop' | 'error' | 'chime') => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      if (type === 'start') {
+        osc.frequency.setValueAtTime(880, ctx.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.1)
+        gain.gain.setValueAtTime(0.1, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.1)
+      } else if (type === 'stop') {
+        osc.frequency.setValueAtTime(440, ctx.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.15)
+        gain.gain.setValueAtTime(0.1, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.15)
+      } else if (type === 'error') {
+        osc.frequency.setValueAtTime(150, ctx.currentTime)
+        gain.gain.setValueAtTime(0.1, ctx.currentTime)
+        osc.type = 'sawtooth'
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.2)
+      } else if (type === 'chime') {
+        osc.frequency.setValueAtTime(523, ctx.currentTime)
+        gain.gain.setValueAtTime(0.05, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.3)
+        const osc2 = ctx.createOscillator()
+        const gain2 = ctx.createGain()
+        osc2.connect(gain2)
+        gain2.connect(ctx.destination)
+        osc2.frequency.setValueAtTime(659, ctx.currentTime + 0.1)
+        gain2.gain.setValueAtTime(0.05, ctx.currentTime + 0.1)
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4)
+        osc2.start(ctx.currentTime + 0.1)
+        osc2.stop(ctx.currentTime + 0.4)
+      }
+    } catch {}
+  }, [])
+
+  // Voice Activity Detection
+  const startVAD = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const analyser = audioContext.createAnalyser()
+      const source = audioContext.createMediaStreamSource(stream)
+      source.connect(analyser)
+      analyser.fftSize = 256
+      audioContextRef.current = audioContext
+      analyserRef.current = analyser
+      vadActiveRef.current = true
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      const checkSilence = () => {
+        if (!vadActiveRef.current) return
+        analyser.getByteFrequencyData(dataArray)
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length
+        
+        if (average < 10) {
+          if (!silenceTimerRef.current) {
+            silenceTimerRef.current = setTimeout(() => {
+              if (mediaRecorderRef.current?.state === 'recording') {
+                mediaRecorderRef.current.stop()
+                stream.getTracks().forEach(t => t.stop())
+              }
+            }, 1500)
+          }
+        } else {
+          if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current)
+            silenceTimerRef.current = null
+          }
+        }
+        requestAnimationFrame(checkSilence)
+      }
+      checkSilence()
+    } catch {}
+  }, [])
+
+  const stopVAD = useCallback(() => {
+    vadActiveRef.current = false
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+      audioContextRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (!hasNativeSTT) {
@@ -37,10 +141,10 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
     rec.lang = 'en-US'
 
     rec.onstart = () => {
-      console.log('[STT] Native recognition started')
       isListeningRef.current = true
       setIsListening(true)
       setError(null)
+      playSound('start')
     }
 
     rec.onresult = (event: any) => {
@@ -55,20 +159,24 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
         }
       }
       if (final) {
-        console.log('[STT] Final:', final)
         setTranscript(final)
         onTranscript(final)
+        playSound('stop')
       } else {
         setTranscript(interim)
       }
     }
 
     rec.onerror = (e: any) => {
-      console.error('[STT] Error:', e.error)
       if (e.error === 'not-allowed') {
         setError('Microphone permission denied.')
+        playSound('error')
       } else if (e.error === 'no-speech') {
         setError('No speech detected.')
+      } else if (e.error === 'aborted') {
+        // User stopped, ignore
+      } else {
+        setError(`STT error: ${e.error}`)
       }
       isListeningRef.current = false
       setIsListening(false)
@@ -83,21 +191,27 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
     }
 
     recognitionRef.current = rec
-  }, [onTranscript, hasNativeSTT])
+  }, [onTranscript, hasNativeSTT, playSound])
 
-  // Server-side STT via Deepgram (for Safari)
+  // Server-side STT via Deepgram with VAD
   const startServerSTT = useCallback(async () => {
     try {
+      setIsProcessingSTT(true)
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
+
+      // Start VAD for auto-stop
+      startVAD()
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data)
       }
 
       mediaRecorder.onstop = async () => {
+        stopVAD()
+        setIsProcessingSTT(true)
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         const reader = new FileReader()
         reader.readAsDataURL(audioBlob)
@@ -113,30 +227,36 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
             if (data.transcript) {
               setTranscript(data.transcript)
               onTranscript(data.transcript)
+              playSound('chime')
             }
           } catch {
             setError('STT failed. Try manual input.')
+            playSound('error')
           }
+          setIsProcessingSTT(false)
           setIsListening(false)
         }
       }
 
-      mediaRecorder.start()
+      mediaRecorder.start(100) // Collect data every 100ms
       setIsListening(true)
       setError(null)
+      playSound('start')
 
-      // Auto-stop after 5 seconds
+      // Max recording time: 30 seconds
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop()
           stream.getTracks().forEach(t => t.stop())
         }
-      }, 5000)
+      }, 30000)
     } catch {
       setError('Microphone access denied.')
       setIsListening(false)
+      setIsProcessingSTT(false)
+      playSound('error')
     }
-  }, [onTranscript])
+  }, [onTranscript, playSound, startVAD, stopVAD])
 
   const startListening = useCallback(() => {
     setTranscript('')
@@ -146,9 +266,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
       isListeningRef.current = true
       try {
         recognitionRef.current?.start()
-      } catch {
-        // Already started
-      }
+      } catch {}
     } else {
       startServerSTT()
     }
@@ -165,9 +283,12 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
       mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop())
     }
 
+    stopVAD()
     setIsListening(false)
-  }, [])
+    playSound('stop')
+  }, [stopVAD, playSound])
 
+  // Streaming TTS - play chunks as they arrive
   const speak = useCallback(async (text: string) => {
     setIsSpeaking(true)
     onSpeakingStart()
@@ -184,13 +305,21 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
         const url = URL.createObjectURL(blob)
         const audio = new Audio(url)
         currentAudioRef.current = audio
-        audio.onended = () => { setIsSpeaking(false); onSpeakingEnd(); URL.revokeObjectURL(url) }
-        audio.onerror = () => { setIsSpeaking(false); onSpeakingEnd() }
+        audio.onended = () => { 
+          setIsSpeaking(false); 
+          onSpeakingEnd(); 
+          URL.revokeObjectURL(url) 
+        }
+        audio.onerror = () => { 
+          setIsSpeaking(false); 
+          onSpeakingEnd() 
+        }
         await audio.play()
         return
       }
       throw new Error('TTS failed')
     } catch {
+      // Fallback to native speech synthesis
       const utter = new SpeechSynthesisUtterance(text)
       utter.rate = 1.1
       utter.pitch = 0.9
@@ -211,6 +340,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
   return { 
     isListening, 
     isSpeaking, 
+    isProcessingSTT,
     transcript, 
     error,
     useManualInput,
@@ -218,6 +348,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
     startListening, 
     stopListening, 
     speak, 
-    stopSpeaking 
+    stopSpeaking,
+    playSound
   }
 }

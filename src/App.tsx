@@ -4,7 +4,9 @@ import { NotificationStack } from './components/NotificationStack'
 import { ChatPanel } from './components/ChatPanel'
 import { StatusBar } from './components/StatusBar'
 import { TaskPanel } from './components/TaskPanel'
+import { ParticleBackground } from './components/ParticleBackground'
 import { useVoice } from './hooks/useVoice'
+import { useWakeWord } from './hooks/useWakeWord'
 import { useNotifications } from './hooks/useNotifications'
 import { useTasks } from './hooks/useTasks'
 import type { Message, Notification } from './types'
@@ -14,12 +16,14 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const [conversationMode, setConversationMode] = useState(false)
+  const [wakeWordEnabled, setWakeWordEnabled] = useState(false)
+  const [pushToTalk, setPushToTalk] = useState(false)
 
   const { notifications, dismissNotification, addNotification } = useNotifications()
   const { tasks, createTask, updateTaskStep, completeTask, dismissTask } = useTasks()
   const speakRef = useRef<((text: string) => Promise<void>)>(async () => {})
 
-  const { isListening, isSpeaking, transcript, error, useManualInput, setUseManualInput, startListening, stopListening, speak, stopSpeaking } = useVoice({
+  const { isListening, isSpeaking, isProcessingSTT, transcript, error, useManualInput, setUseManualInput, startListening, stopListening, speak, stopSpeaking, playSound } = useVoice({
     onTranscript: (text) => handleUserMessage(text, 'voice'),
     onSpeakingStart: () => {},
     onSpeakingEnd: () => {},
@@ -27,7 +31,55 @@ export default function App() {
 
   speakRef.current = speak
 
-  // Detect task type from user message
+  // Wake word detection
+  useWakeWord({
+    wakeWord: 'hey jarvis',
+    onWake: () => {
+      playSound('chime')
+      startListening()
+    },
+    enabled: wakeWordEnabled && !isListening && !isSpeaking,
+  })
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault()
+        setPushToTalk(true)
+        if (!isListening && !isSpeaking) {
+          startListening()
+        }
+      }
+      if (e.key === 'Escape') {
+        stopListening()
+        stopSpeaking()
+      }
+      if (e.key === 'l' && e.ctrlKey) {
+        e.preventDefault()
+        setWakeWordEnabled(w => !w)
+      }
+    }
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setPushToTalk(false)
+        if (isListening) {
+          stopListening()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [isListening, isSpeaking, startListening, stopListening, stopSpeaking])
+
   const detectTaskType = (text: string): string => {
     const lower = text.toLowerCase()
     if (lower.includes('create') || lower.includes('build') || lower.includes('code') || lower.includes('make') || lower.includes('write')) return 'code'
@@ -41,11 +93,9 @@ export default function App() {
     setMessages(prev => [...prev, userMsg])
     setIsTyping(true)
 
-    // Create visual task
     const taskType = detectTaskType(text)
     const taskId = createTask(taskType, text)
 
-    // Simulate step progression
     const stepInterval = setInterval(() => {
       const task = tasks.find(t => t.id === taskId)
       if (task) {
@@ -66,7 +116,6 @@ export default function App() {
       const assistantMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.reply || 'I am here, sir.', timestamp: Date.now() }
       setMessages(prev => [...prev, assistantMsg])
 
-      // Complete task
       clearInterval(stepInterval)
       completeTask(taskId, true)
 
@@ -89,7 +138,7 @@ export default function App() {
     setIsTyping(false)
   }, [mode, addNotification, createTask, updateTaskStep, completeTask, tasks])
 
-  // Auto-turn: after speaking ends in conversation mode, start listening again
+  // Auto-turn
   useEffect(() => {
     if (conversationMode && !isSpeaking && !isTyping && !isListening && mode === 'voice') {
       const timeout = setTimeout(() => startListening(), 800)
@@ -108,33 +157,27 @@ export default function App() {
     setMessages(prev => [...prev, msg])
   }, [dismissNotification])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        stopListening()
-        stopSpeaking()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [stopListening, stopSpeaking])
-
   return (
-    <div className="h-screen w-screen bg-jarvis-bg text-jarvis-text flex flex-col overflow-hidden select-none">
+    <div className="h-screen w-screen bg-jarvis-bg text-jarvis-text flex flex-col overflow-hidden select-none relative">
+      <ParticleBackground />
+      
       <StatusBar 
         mode={mode} 
         onToggleMode={() => setMode(m => m === 'voice' ? 'chat' : 'voice')} 
         isConnected={true}
         conversationMode={conversationMode}
         onToggleConversation={() => setConversationMode(c => !c)}
+        wakeWordEnabled={wakeWordEnabled}
+        onToggleWakeWord={() => setWakeWordEnabled(w => !w)}
       />
 
-      <div className="flex-1 relative">
+      <div className="flex-1 relative z-10">
         {mode === 'voice' ? (
           <VoiceCore
             isListening={isListening}
             isSpeaking={isSpeaking}
             isTyping={isTyping}
+            isProcessingSTT={isProcessingSTT}
             transcript={transcript}
             error={error}
             useManualInput={useManualInput}
@@ -143,6 +186,7 @@ export default function App() {
             conversationMode={conversationMode}
             onInterrupt={handleInterrupt}
             messages={messages}
+            pushToTalk={pushToTalk}
             onTap={() => isListening ? stopListening() : startListening()}
           />
         ) : (

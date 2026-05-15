@@ -1,4 +1,4 @@
-import { Mic, MessageSquare, Radio } from 'lucide-react'
+import { Mic, MessageSquare, Radio, Ear } from 'lucide-react'
 
 interface Props {
   mode: 'voice' | 'chat'
@@ -6,9 +6,11 @@ interface Props {
   isConnected: boolean
   conversationMode?: boolean
   onToggleConversation?: () => void
+  wakeWordEnabled?: boolean
+  onToggleWakeWord?: () => void
 }
 
-export function StatusBar({ mode, onToggleMode, isConnected, conversationMode, onToggleConversation }: Props) {
+export function StatusBar({ mode, onToggleMode, isConnected, conversationMode, onToggleConversation, wakeWordEnabled, onToggleWakeWord }: Props) {
   const now = new Date()
   const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   const date = now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
@@ -24,6 +26,20 @@ export function StatusBar({ mode, onToggleMode, isConnected, conversationMode, o
       </div>
 
       <div className="flex items-center gap-2">
+        {mode === 'voice' && onToggleWakeWord && (
+          <button
+            onClick={onToggleWakeWord}
+            className={`p-2 sm:p-2.5 rounded-xl border transition active:scale-90 ${
+              wakeWordEnabled 
+                ? 'bg-jarvis-accent/20 border-jarvis-accent text-jarvis-accent' 
+                : 'bg-jarvis-panel border-jarvis-border/50 text-jarvis-text-dim hover:text-jarvis-accent'
+            }`}
+            title="Wake Word: 'Hey Jarvis'"
+          >
+            <Ear className="w-4 h-4" />
+          </button>
+        )}
+
         {mode === 'voice' && onToggleConversation && (
           <button
             onClick={onToggleConversation}
