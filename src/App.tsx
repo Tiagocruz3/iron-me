@@ -136,7 +136,8 @@ export default function App() {
       if (stepInterval) clearInterval(stepInterval)
       if (taskId) completeTask(taskId, true)
 
-      if (source === 'voice' || mode === 'voice') {
+      // Always speak reply in voice mode, regardless of source
+      if (mode === 'voice') {
         if (isCallActive) {
           await liveSpeak(data.reply || 'I am here, sir.')
         } else {
@@ -152,7 +153,7 @@ export default function App() {
       if (taskId) completeTask(taskId, false)
       const fallback: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Connection to the mainframe is unstable.', timestamp: Date.now() }
       setMessages(prev => [...prev, fallback])
-      if (source === 'voice' || mode === 'voice') {
+      if (mode === 'voice') {
         if (isCallActive) {
           await liveSpeak('Connection to the mainframe is unstable.')
         } else {
@@ -161,7 +162,7 @@ export default function App() {
       }
     }
     setIsTyping(false)
-  }, [mode, addNotification, createTask, updateTaskStep, completeTask, tasks])
+  }, [mode, addNotification, createTask, updateTaskStep, completeTask, tasks, isCallActive, liveSpeak])
 
   // Auto-turn
   useEffect(() => {
