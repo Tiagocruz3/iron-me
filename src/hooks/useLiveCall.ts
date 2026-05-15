@@ -21,7 +21,7 @@ export function useLiveCall({ onTranscript, onSpeakingStart, onSpeakingEnd }: Us
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const callActiveRef = useRef(false)
 
-  const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'Q7IOSFX7VG3cnK4eU8Z4'
+  const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'Q7IOSFX7VG3cnK4e8U4Z'
 
   // Sound effects
   const playSound = useCallback((type: 'start' | 'stop' | 'chime') => {

@@ -20,7 +20,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
   const audioChunksRef = useRef<Blob[]>([])
   const silenceTimerRef = useRef<any>(null)
 
-  const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'Q7IOSFX7VG3cnK4eU8Z4'
+  const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'Q7IOSFX7VG3cnK4e8U4Z'
 
   const hasNativeSTT = typeof window !== 'undefined' && 
     ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)

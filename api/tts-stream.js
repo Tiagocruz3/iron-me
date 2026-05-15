@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   }
 
   const { text, voiceId: voiceIdFromBody } = req.body
-  const voiceId = process.env.ELEVENLABS_VOICE_ID || voiceIdFromBody || 'Q7IOSFX7VG3cnK4eU8Z4'
+  const voiceId = process.env.ELEVENLABS_VOICE_ID || voiceIdFromBody || 'Q7IOSFX7VG3cnK4e8U4Z'
 
   if (!text) {
     return res.status(400).json({ error: 'Text required' })
