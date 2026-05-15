@@ -32,7 +32,7 @@ export default function App() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: messages.slice(-10) }),
+        body: JSON.stringify({ message: text }),
       })
       const data = await res.json()
       const assistantMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.reply || 'I am here, sir.', timestamp: Date.now() }
@@ -53,7 +53,7 @@ export default function App() {
       }
     }
     setIsTyping(false)
-  }, [messages, mode, addNotification])
+  }, [mode, addNotification])
 
   const handleApproval = useCallback((notif: Notification, approved: boolean) => {
     dismissNotification(notif.id)

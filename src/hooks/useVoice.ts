@@ -52,12 +52,29 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
 
   const startListening = useCallback(() => {
     setTranscript('')
-    recognitionRef.current?.start()
-    setIsListening(true)
+    try {
+      recognitionRef.current?.start()
+      setIsListening(true)
+    } catch {
+      // Already started — restart it
+      try {
+        recognitionRef.current?.stop()
+        setTimeout(() => {
+          recognitionRef.current?.start()
+          setIsListening(true)
+        }, 100)
+      } catch {
+        setIsListening(false)
+      }
+    }
   }, [])
 
   const stopListening = useCallback(() => {
-    recognitionRef.current?.stop()
+    try {
+      recognitionRef.current?.stop()
+    } catch {
+      // Already stopped
+    }
     setIsListening(false)
   }, [])
 
