@@ -242,7 +242,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
     setIsListening(false)
     playSound('stop')
   }, [playSound])
-
+  // Streaming TTS - play chunks as they arrive
   const speak = useCallback(async (text: string) => {
     setIsSpeaking(true)
     onSpeakingStart()
@@ -254,7 +254,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
         body: JSON.stringify({ text, voiceId }),
       })
 
-      if (res.ok && res.headers.get('content-type')?.includes('audio')) {
+      if (res.ok) {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
         const audio = new Audio(url)
@@ -273,6 +273,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
       }
       throw new Error('TTS failed')
     } catch {
+      // Fallback to native speech synthesis
       const utter = new SpeechSynthesisUtterance(text)
       utter.rate = 1.1
       utter.pitch = 0.9
@@ -281,7 +282,6 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
       speechSynthesis.speak(utter)
     }
   }, [onSpeakingStart, onSpeakingEnd, voiceId])
-
   const stopSpeaking = useCallback(() => {
     currentAudioRef.current?.pause()
     currentAudioRef.current = null
