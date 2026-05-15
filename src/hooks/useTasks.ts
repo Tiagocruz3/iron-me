@@ -55,6 +55,7 @@ export function useTasks() {
       id: `task-${now}`,
       title: template.title,
       description,
+      type,
       status: 'running',
       progress: 0,
       timestamp: now,

@@ -32,6 +32,7 @@ export interface Task {
   id: string
   title: string
   description: string
+  type: string
   status: 'pending' | 'running' | 'completed' | 'failed'
   steps: TaskStep[]
   progress: number
