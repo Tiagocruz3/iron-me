@@ -6,7 +6,9 @@ import { StatusBar } from './components/StatusBar'
 import { TaskPanel } from './components/TaskPanel'
 import { ParticleBackground } from './components/ParticleBackground'
 import { ARMode } from './components/ARMode'
+import { LiveCall } from './components/LiveCall'
 import { useVoice } from './hooks/useVoice'
+import { useLiveCall } from './hooks/useLiveCall'
 import { useWakeWord } from './hooks/useWakeWord'
 import { useNotifications } from './hooks/useNotifications'
 import { useTasks } from './hooks/useTasks'
@@ -25,6 +27,13 @@ export default function App() {
   const speakRef = useRef<((text: string) => Promise<void>)>(async () => {})
 
   const { isListening, isSpeaking, isProcessingSTT, transcript, error, useManualInput, setUseManualInput, startListening, stopListening, speak, stopSpeaking, playSound } = useVoice({
+    onTranscript: (text) => handleUserMessage(text, 'voice'),
+    onSpeakingStart: () => {},
+    onSpeakingEnd: () => {},
+  })
+
+  // Live call hook
+  const { isCallActive, isListening: isLiveListening, isSpeaking: isLiveSpeaking, startCall, endCall, speak: liveSpeak, interrupt } = useLiveCall({
     onTranscript: (text) => handleUserMessage(text, 'voice'),
     onSpeakingStart: () => {},
     onSpeakingEnd: () => {},
@@ -121,7 +130,11 @@ export default function App() {
       completeTask(taskId, true)
 
       if (source === 'voice' || mode === 'voice') {
-        await speakRef.current(data.reply || 'I am here, sir.')
+        if (isCallActive) {
+          await liveSpeak(data.reply || 'I am here, sir.')
+        } else {
+          await speakRef.current(data.reply || 'I am here, sir.')
+        }
       }
 
       if (data.notification) {
@@ -133,7 +146,11 @@ export default function App() {
       const fallback: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Connection to the mainframe is unstable.', timestamp: Date.now() }
       setMessages(prev => [...prev, fallback])
       if (source === 'voice' || mode === 'voice') {
-        await speakRef.current('Connection to the mainframe is unstable.')
+        if (isCallActive) {
+          await liveSpeak('Connection to the mainframe is unstable.')
+        } else {
+          await speakRef.current('Connection to the mainframe is unstable.')
+        }
       }
     }
     setIsTyping(false)
@@ -176,26 +193,36 @@ export default function App() {
         {mode === 'ar' ? (
           <ARMode onBack={() => setMode('voice')} />
         ) : mode === 'voice' ? (
-          <VoiceCore
-            isListening={isListening}
-            isSpeaking={isSpeaking}
-            isTyping={isTyping}
-            isProcessingSTT={isProcessingSTT}
-            transcript={transcript}
-            error={error}
-            useManualInput={useManualInput}
-            setUseManualInput={setUseManualInput}
-            onManualSubmit={(text) => handleUserMessage(text, 'text')}
-            conversationMode={conversationMode}
-            onInterrupt={handleInterrupt}
-            messages={messages}
-            pushToTalk={pushToTalk}
-            onTap={() => isListening ? stopListening() : startListening()}
-          />
+          <>
+            <VoiceCore
+              isListening={isListening}
+              isSpeaking={isSpeaking}
+              isTyping={isTyping}
+              isProcessingSTT={isProcessingSTT}
+              transcript={transcript}
+              error={error}
+              useManualInput={useManualInput}
+              setUseManualInput={setUseManualInput}
+              onManualSubmit={(text) => handleUserMessage(text, 'text')}
+              conversationMode={conversationMode}
+              onInterrupt={handleInterrupt}
+              messages={messages}
+              pushToTalk={pushToTalk}
+              onTap={() => isListening ? stopListening() : startListening()}
+            />
+            <LiveCall
+              isCallActive={isCallActive}
+              isListening={isLiveListening}
+              isSpeaking={isLiveSpeaking}
+              onStartCall={startCall}
+              onEndCall={endCall}
+            />
+          </>
         ) : (
           <ChatPanel messages={messages} isTyping={isTyping} onSend={(text) => handleUserMessage(text, 'text')} />
         )}
 
+        {/* Task cards show in ALL modes */}
         <TaskPanel tasks={tasks} onDismiss={dismissTask} />
 
         <NotificationStack
