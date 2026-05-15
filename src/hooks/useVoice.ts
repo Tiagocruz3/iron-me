@@ -11,10 +11,8 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [transcript, setTranscript] = useState('')
   const recognitionRef = useRef<any>(null)
-  const wsRef = useRef<WebSocket | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
-  const audioQueueRef = useRef<AudioBuffer[]>([])
-  const isPlayingRef = useRef(false)
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -56,7 +54,6 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
       recognitionRef.current?.start()
       setIsListening(true)
     } catch {
-      // Already started — restart it
       try {
         recognitionRef.current?.stop()
         setTimeout(() => {
@@ -72,95 +69,58 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
   const stopListening = useCallback(() => {
     try {
       recognitionRef.current?.stop()
-    } catch {
-      // Already stopped
-    }
+    } catch {}
     setIsListening(false)
   }, [])
 
-  const playNext = useCallback((ctx: AudioContext) => {
-    if (isPlayingRef.current || audioQueueRef.current.length === 0) return
-    isPlayingRef.current = true
-    const buffer = audioQueueRef.current.shift()!
-    const source = ctx.createBufferSource()
-    source.buffer = buffer
-    source.connect(ctx.destination)
-    source.onended = () => {
-      isPlayingRef.current = false
-      playNext(ctx)
-    }
-    source.start()
-  }, [])
-
   const speak = useCallback(async (text: string) => {
-    const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY
-    const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'Q7IOSFX7VG3cnK4eU8Z4'
-    if (!apiKey) {
+    const voiceId = 'Q7IOSFX7VG3cnK4eU8Z4'
+
+    setIsSpeaking(true)
+    onSpeakingStart()
+
+    try {
+      // Try server-side TTS first (no API key exposed to client)
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voiceId }),
+      })
+
+      if (res.ok && res.headers.get('content-type')?.includes('audio')) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        currentAudioRef.current = audio
+        audio.onended = () => {
+          setIsSpeaking(false)
+          onSpeakingEnd()
+          URL.revokeObjectURL(url)
+        }
+        audio.onerror = () => {
+          setIsSpeaking(false)
+          onSpeakingEnd()
+        }
+        await audio.play()
+        return
+      }
+
+      // Fallback to native speech synthesis
+      throw new Error('Server TTS unavailable')
+    } catch {
       const utter = new SpeechSynthesisUtterance(text)
       utter.rate = 1.1
       utter.pitch = 0.9
       utter.onstart = () => setIsSpeaking(true)
       utter.onend = () => setIsSpeaking(false)
       speechSynthesis.speak(utter)
-      return
     }
-
-    setIsSpeaking(true)
-    onSpeakingStart()
-
-    try {
-      const ws = new WebSocket(`wss://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream-input?model_id=eleven_flash_v2_5`)
-      wsRef.current = ws
-
-      await new Promise<void>((resolve, reject) => {
-        ws.onopen = () => resolve()
-        ws.onerror = reject
-      })
-
-      ws.send(JSON.stringify({
-        text: ' ',
-        voice_settings: { stability: 0.5, similarity_boost: 0.8 },
-        xi_api_key: apiKey,
-      }))
-
-      ws.send(JSON.stringify({ text: text + ' ' }))
-      ws.send(JSON.stringify({ text: '' }))
-
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext()
-      }
-      const ctx = audioCtxRef.current
-
-      ws.onmessage = async (event) => {
-        const data = JSON.parse(event.data)
-        if (data.audio) {
-          const binary = atob(data.audio)
-          const bytes = new Uint8Array(binary.length)
-          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-          const buffer = await ctx.decodeAudioData(bytes.buffer)
-          audioQueueRef.current.push(buffer)
-          playNext(ctx)
-        }
-        if (data.isFinal) {
-          setIsSpeaking(false)
-          onSpeakingEnd()
-        }
-      }
-
-      ws.onerror = () => {
-        setIsSpeaking(false)
-        onSpeakingEnd()
-      }
-    } catch {
-      setIsSpeaking(false)
-      onSpeakingEnd()
-    }
-  }, [onSpeakingStart, onSpeakingEnd, playNext])
+  }, [onSpeakingStart, onSpeakingEnd])
 
   const stopSpeaking = useCallback(() => {
-    wsRef.current?.close()
-    audioQueueRef.current = []
-    isPlayingRef.current = false
+    currentAudioRef.current?.pause()
+    currentAudioRef.current = null
+    speechSynthesis.cancel()
     setIsSpeaking(false)
     onSpeakingEnd()
   }, [onSpeakingEnd])
