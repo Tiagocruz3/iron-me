@@ -5,6 +5,7 @@ import { ChatPanel } from './components/ChatPanel'
 import { StatusBar } from './components/StatusBar'
 import { TaskPanel } from './components/TaskPanel'
 import { ParticleBackground } from './components/ParticleBackground'
+import { ARMode } from './components/ARMode'
 import { useVoice } from './hooks/useVoice'
 import { useWakeWord } from './hooks/useWakeWord'
 import { useNotifications } from './hooks/useNotifications'
@@ -12,7 +13,7 @@ import { useTasks } from './hooks/useTasks'
 import type { Message, Notification } from './types'
 
 export default function App() {
-  const [mode, setMode] = useState<'voice' | 'chat'>('voice')
+  const [mode, setMode] = useState<'voice' | 'chat' | 'ar'>('voice')
   const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
   const [conversationMode, setConversationMode] = useState(false)
@@ -172,7 +173,9 @@ export default function App() {
       />
 
       <div className="flex-1 relative z-10">
-        {mode === 'voice' ? (
+        {mode === 'ar' ? (
+          <ARMode onBack={() => setMode('voice')} />
+        ) : mode === 'voice' ? (
           <VoiceCore
             isListening={isListening}
             isSpeaking={isSpeaking}
