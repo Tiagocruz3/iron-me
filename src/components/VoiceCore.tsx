@@ -6,6 +6,7 @@ interface VoiceCoreProps {
   isListening: boolean
   isSpeaking: boolean
   isTyping: boolean
+  isProcessingSTT?: boolean
   transcript: string
   error: string | null
   useManualInput: boolean
@@ -14,6 +15,7 @@ interface VoiceCoreProps {
   conversationMode?: boolean
   onInterrupt?: () => void
   messages?: Message[]
+  pushToTalk?: boolean
   onTap: () => void
 }
 
@@ -21,6 +23,7 @@ export function VoiceCore({
   isListening, 
   isSpeaking, 
   isTyping, 
+  isProcessingSTT,
   transcript, 
   error, 
   useManualInput, 
@@ -29,6 +32,7 @@ export function VoiceCore({
   conversationMode,
   onInterrupt,
   messages = [],
+  pushToTalk,
   onTap 
 }: VoiceCoreProps) {
   const state = isListening ? 'listening' : isSpeaking ? 'speaking' : isTyping ? 'thinking' : 'idle'
