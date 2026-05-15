@@ -15,7 +15,7 @@ export default function App() {
   const { notifications, dismissNotification, addNotification } = useNotifications()
   const speakRef = useRef<((text: string) => Promise<void>)>(async () => {})
 
-  const { isListening, isSpeaking, transcript, startListening, stopListening, speak, stopSpeaking } = useVoice({
+  const { isListening, isSpeaking, transcript, error, startListening, stopListening, speak, stopSpeaking } = useVoice({
     onTranscript: (text) => handleUserMessage(text, 'voice'),
     onSpeakingStart: () => {},
     onSpeakingEnd: () => {},
@@ -83,6 +83,7 @@ export default function App() {
             isSpeaking={isSpeaking}
             isTyping={isTyping}
             transcript={transcript}
+            error={error}
             onTap={() => isListening ? stopListening() : startListening()}
           />
         ) : (

@@ -10,18 +10,29 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [transcript, setTranscript] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const recognitionRef = useRef<any>(null)
-  const audioCtxRef = useRef<AudioContext | null>(null)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
+  const isListeningRef = useRef(false)
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) return
+    if (!SpeechRecognition) {
+      setError('Speech recognition not supported in this browser')
+      return
+    }
 
     const rec = new SpeechRecognition()
     rec.continuous = true
     rec.interimResults = true
     rec.lang = 'en-US'
+
+    rec.onstart = () => {
+      console.log('[STT] Recognition started')
+      isListeningRef.current = true
+      setIsListening(true)
+      setError(null)
+    }
 
     rec.onresult = (event: any) => {
       let final = ''
@@ -35,6 +46,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
         }
       }
       if (final) {
+        console.log('[STT] Final transcript:', final)
         setTranscript(final)
         onTranscript(final)
       } else {
@@ -42,31 +54,53 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
       }
     }
 
-    rec.onerror = () => setIsListening(false)
-    rec.onend = () => setIsListening(false)
+    rec.onerror = (e: any) => {
+      console.error('[STT] Error:', e.error)
+      if (e.error === 'not-allowed') {
+        setError('Microphone permission denied. Please allow mic access.')
+      } else if (e.error === 'no-speech') {
+        setError('No speech detected. Try again.')
+      } else {
+        setError(`Speech error: ${e.error}`)
+      }
+      isListeningRef.current = false
+      setIsListening(false)
+    }
+
+    rec.onend = () => {
+      console.log('[STT] Recognition ended. wasListening:', isListeningRef.current)
+      // Only auto-restart if we intentionally want to keep listening
+      if (isListeningRef.current) {
+        try {
+          rec.start()
+        } catch {
+          isListeningRef.current = false
+          setIsListening(false)
+        }
+      } else {
+        setIsListening(false)
+      }
+    }
 
     recognitionRef.current = rec
   }, [onTranscript])
 
   const startListening = useCallback(() => {
+    console.log('[STT] startListening called')
     setTranscript('')
+    setError(null)
+    isListeningRef.current = true
     try {
       recognitionRef.current?.start()
-      setIsListening(true)
-    } catch {
-      try {
-        recognitionRef.current?.stop()
-        setTimeout(() => {
-          recognitionRef.current?.start()
-          setIsListening(true)
-        }, 100)
-      } catch {
-        setIsListening(false)
-      }
+    } catch (e: any) {
+      console.error('[STT] start failed:', e.message)
+      // Already started — do nothing
     }
   }, [])
 
   const stopListening = useCallback(() => {
+    console.log('[STT] stopListening called')
+    isListeningRef.current = false
     try {
       recognitionRef.current?.stop()
     } catch {}
@@ -80,7 +114,6 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
     onSpeakingStart()
 
     try {
-      // Try server-side TTS first (no API key exposed to client)
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,7 +138,6 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
         return
       }
 
-      // Fallback to native speech synthesis
       throw new Error('Server TTS unavailable')
     } catch {
       const utter = new SpeechSynthesisUtterance(text)
@@ -125,5 +157,5 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
     onSpeakingEnd()
   }, [onSpeakingEnd])
 
-  return { isListening, isSpeaking, transcript, startListening, stopListening, speak, stopSpeaking }
+  return { isListening, isSpeaking, transcript, error, startListening, stopListening, speak, stopSpeaking }
 }

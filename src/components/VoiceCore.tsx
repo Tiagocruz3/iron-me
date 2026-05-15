@@ -5,10 +5,11 @@ interface VoiceCoreProps {
   isSpeaking: boolean
   isTyping: boolean
   transcript: string
+  error: string | null
   onTap: () => void
 }
 
-export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap }: VoiceCoreProps) {
+export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error, onTap }: VoiceCoreProps) {
   const state = isListening ? 'listening' : isSpeaking ? 'speaking' : isTyping ? 'thinking' : 'idle'
 
   const colors = {
@@ -248,6 +249,17 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
             />
           ))}
         </div>
+      )}
+
+      {/* Error message */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-3 px-4 py-2 bg-jarvis-urgent/10 border border-jarvis-urgent/30 rounded-lg text-[10px] text-jarvis-urgent text-center max-w-[280px]"
+        >
+          {error}
+        </motion.div>
       )}
 
       {/* Bottom prompt */}
