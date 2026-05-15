@@ -30,7 +30,6 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center relative scanline">
-      {/* Ambient radial glow */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
         animate={{ background: `radial-gradient(circle at center, ${g} 0%, transparent 60%)` }}
@@ -46,11 +45,11 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
         <WeatherWidget />
       </div>
 
-      <div className="hidden xl:flex absolute bottom-16 left-4 flex-col gap-3">
+      <div className="hidden xl:flex absolute bottom-20 left-4 flex-col gap-3">
         <BatteryWidget />
       </div>
 
-      <div className="hidden xl:flex absolute bottom-16 right-4 flex-col gap-3">
+      <div className="hidden xl:flex absolute bottom-20 right-4 flex-col gap-3">
         <EarthWidget />
         <RadarWidget color={c} />
       </div>
@@ -58,7 +57,7 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
       {/* Title */}
       <div className="text-center mb-2 z-10">
         <motion.h1
-          className="text-lg sm:text-xl lg:text-2xl font-light tracking-[0.3em] text-jarvis-cyan"
+          className="text-base sm:text-lg lg:text-xl font-light tracking-[0.3em] text-jarvis-cyan"
           style={{ textShadow: '0 0 20px rgba(0, 210, 255, 0.5)' }}
           animate={{ opacity: [0.8, 1, 0.8] }}
           transition={{ duration: 3, repeat: Infinity }}
@@ -68,8 +67,8 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
       </div>
 
       {/* Command text box */}
-      <div className="relative mb-4 z-10">
-        <div className="flex items-center gap-2 bg-jarvis-panel/80 border border-jarvis-border rounded-xl px-4 py-2 min-w-[280px] sm:min-w-[360px]">
+      <div className="relative mb-3 z-10">
+        <div className="flex items-center gap-2 bg-jarvis-panel/80 border border-jarvis-border rounded-xl px-4 py-2 min-w-[260px] sm:min-w-[340px]">
           <span className="text-xs text-jarvis-text-dim">Comands, {transcript || '...'}</span>
           <motion.span
             className="w-0.5 h-4 bg-jarvis-cyan"
@@ -81,22 +80,21 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
       </div>
 
       {/* Buttons */}
-      <div className="flex gap-3 mb-6 z-10">
-        <button className="gradient-border gradient-border-glow px-5 py-2 text-xs sm:text-sm text-white tracking-wider hover:bg-white/5 transition">
+      <div className="flex gap-3 mb-5 z-10">
+        <button className="gradient-border gradient-border-glow px-4 py-2 text-xs text-white tracking-wider hover:bg-white/5 transition">
           All Commands
         </button>
         <button
           onClick={onTap}
-          className="gradient-border gradient-border-glow px-5 py-2 text-xs sm:text-sm text-jarvis-cyan tracking-wider hover:bg-white/5 transition"
+          className="gradient-border gradient-border-glow px-4 py-2 text-xs text-jarvis-cyan tracking-wider hover:bg-white/5 transition"
         >
           {isListening ? 'Stop Listening' : 'Start Listening'}
         </button>
       </div>
 
-      {/* Main HUD container */}
+      {/* Main HUD */}
       <div className="relative flex items-center justify-center" onClick={onTap}>
-        <div className="relative w-[260px] h-[260px] sm:w-[320px] sm:h-[320px] lg:w-[400px] lg:h-[400px]">
-          {/* Outer glow halo */}
+        <div className="relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px] lg:w-[380px] lg:h-[380px]">
           <motion.div
             className="absolute inset-[-10%] rounded-full"
             style={{ background: `radial-gradient(circle, ${g} 0%, transparent 70%)` }}
@@ -210,7 +208,7 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
 
             <div className="text-center z-10">
               <motion.span
-                className="text-[9px] sm:text-[10px] lg:text-xs font-light tracking-[0.25em] text-white/90 block"
+                className="text-[8px] sm:text-[9px] lg:text-[10px] font-light tracking-[0.25em] text-white/90 block"
                 style={{ textShadow: `0 0 10px ${c}` }}
                 animate={{ opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 2, repeat: Infinity }}
@@ -225,7 +223,7 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
             {Array.from({ length: 5 }).map((_, i) => (
               <motion.div
                 key={i}
-                className="w-2.5 h-1.5 sm:w-3 sm:h-2 border border-jarvis-cyan/50 rounded-sm"
+                className="w-2 h-1.5 sm:w-2.5 sm:h-2 border border-jarvis-cyan/50 rounded-sm"
                 animate={{
                   opacity: (isListening || isSpeaking) ? [0.3, 1, 0.3] : 0.4,
                   borderColor: c,
@@ -239,13 +237,13 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
 
       {/* Waveform */}
       {(isListening || isSpeaking) && (
-        <div className="flex items-end gap-0.5 h-6 sm:h-8 mt-4">
+        <div className="flex items-end gap-0.5 h-5 sm:h-6 mt-3">
           {Array.from({ length: 20 }).map((_, i) => (
             <motion.div
               key={i}
-              className="w-0.5 sm:w-1 rounded-full"
+              className="w-0.5 sm:w-0.5 rounded-full"
               style={{ backgroundColor: c }}
-              animate={{ height: isListening ? [3, 20, 3] : isSpeaking ? [4, 28, 4] : 3 }}
+              animate={{ height: isListening ? [3, 18, 3] : isSpeaking ? [4, 24, 4] : 3 }}
               transition={{ duration: 0.35, repeat: Infinity, delay: i * 0.025 }}
             />
           ))}
@@ -253,13 +251,13 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
       )}
 
       {/* Bottom prompt */}
-      <p className="mt-3 text-[10px] sm:text-xs text-jarvis-text-dim/40 tracking-[0.2em] uppercase">
+      <p className="mt-2 text-[10px] text-jarvis-text-dim/40 tracking-[0.2em] uppercase">
         {isListening ? 'Tap to terminate' : "Say 'Hello Jarvis'"}
       </p>
 
       {/* Bottom nav dock */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-        <div className="flex items-center gap-1 sm:gap-2 bg-jarvis-panel/90 backdrop-blur-xl border border-jarvis-border/50 rounded-full px-3 py-2 sm:px-4 sm:py-2.5">
+        <div className="flex items-center gap-1 sm:gap-2 bg-jarvis-panel/90 backdrop-blur-xl border border-jarvis-border/50 rounded-full px-3 py-2">
           {[
             { icon: CalendarIcon, label: 'Calendar' },
             { icon: ClockIcon, label: 'Clock' },
@@ -269,10 +267,10 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
           ].map(({ icon: Icon, label }) => (
             <button
               key={label}
-              className="p-2 sm:p-2.5 rounded-full text-jarvis-cyan/60 hover:text-jarvis-cyan hover:bg-jarvis-cyan/10 transition active:scale-90"
+              className="p-2 rounded-full text-jarvis-cyan/60 hover:text-jarvis-cyan hover:bg-jarvis-cyan/10 transition active:scale-90"
               title={label}
             >
-              <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Icon className="w-4 h-4" />
             </button>
           ))}
         </div>
@@ -281,7 +279,7 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, onTap
   )
 }
 
-/* Corner Widget Components */
+/* Corner Widgets */
 
 function SystemStatusPanel() {
   return (
@@ -320,7 +318,6 @@ function SystemStatusPanel() {
         </div>
       </div>
 
-      {/* Oscilloscope graph */}
       <div className="mt-3 h-16 border border-jarvis-border/30 rounded-lg relative overflow-hidden">
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
           <path
@@ -403,22 +400,14 @@ function RadarWidget({ color }: { color: string }) {
         <div className="absolute inset-[20%] rounded-full border border-jarvis-border/20" />
         <div className="absolute inset-[40%] rounded-full border border-jarvis-border/15" />
         <div className="absolute inset-[60%] rounded-full border border-jarvis-border/10" />
-
-        {/* Crosshairs */}
         <div className="absolute inset-x-0 top-1/2 h-px bg-jarvis-border/20" />
         <div className="absolute inset-y-0 left-1/2 w-px bg-jarvis-border/20" />
-
-        {/* Blips */}
         <div className="absolute w-1.5 h-1.5 rounded-full bg-jarvis-cyan top-[30%] left-[40%] animate-pulse" />
         <div className="absolute w-1 h-1 rounded-full bg-jarvis-success top-[60%] left-[65%] animate-pulse" style={{ animationDelay: '0.5s' }} />
         <div className="absolute w-1 h-1 rounded-full bg-jarvis-warn top-[45%] left-[25%] animate-pulse" style={{ animationDelay: '1s' }} />
-
-        {/* Sweep line */}
         <motion.div
           className="absolute inset-0"
-          style={{
-            background: `conic-gradient(from 0deg, transparent 0deg, ${color}20 30deg, transparent 60deg)`,
-          }}
+          style={{ background: `conic-gradient(from 0deg, transparent 0deg, ${color}20 30deg, transparent 60deg)` }}
           animate={{ rotate: 360 }}
           transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
         />

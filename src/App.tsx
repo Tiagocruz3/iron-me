@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { VoiceCore } from './components/VoiceCore'
 import { NotificationStack } from './components/NotificationStack'
 import { ChatPanel } from './components/ChatPanel'
@@ -13,6 +13,15 @@ export default function App() {
   const [isTyping, setIsTyping] = useState(false)
 
   const { notifications, dismissNotification, addNotification } = useNotifications()
+  const speakRef = useRef<((text: string) => Promise<void>)>(async () => {})
+
+  const { isListening, isSpeaking, transcript, startListening, stopListening, speak, stopSpeaking } = useVoice({
+    onTranscript: (text) => handleUserMessage(text, 'voice'),
+    onSpeakingStart: () => {},
+    onSpeakingEnd: () => {},
+  })
+
+  speakRef.current = speak
 
   const handleUserMessage = useCallback(async (text: string, source: 'voice' | 'text') => {
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, timestamp: Date.now() }
@@ -29,21 +38,22 @@ export default function App() {
       const assistantMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.reply || 'I am here, sir.', timestamp: Date.now() }
       setMessages(prev => [...prev, assistantMsg])
 
+      if ((source === 'voice' || mode === 'voice')) {
+        await speakRef.current(data.reply || 'I am here, sir.')
+      }
+
       if (data.notification) {
         addNotification(data.notification)
       }
     } catch {
       const fallback: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Connection to the mainframe is unstable.', timestamp: Date.now() }
       setMessages(prev => [...prev, fallback])
+      if ((source === 'voice' || mode === 'voice')) {
+        await speakRef.current('Connection to the mainframe is unstable.')
+      }
     }
     setIsTyping(false)
-  }, [messages, addNotification])
-
-  const { isListening, isSpeaking, transcript, startListening, stopListening, speak, stopSpeaking } = useVoice({
-    onTranscript: (text) => handleUserMessage(text, 'voice'),
-    onSpeakingStart: () => {},
-    onSpeakingEnd: () => {},
-  })
+  }, [messages, mode, addNotification])
 
   const handleApproval = useCallback((notif: Notification, approved: boolean) => {
     dismissNotification(notif.id)
