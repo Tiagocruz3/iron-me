@@ -11,6 +11,7 @@ export default function App() {
   const [mode, setMode] = useState<'voice' | 'chat'>('voice')
   const [messages, setMessages] = useState<Message[]>([])
   const [isTyping, setIsTyping] = useState(false)
+  const [conversationMode, setConversationMode] = useState(false)
 
   const { notifications, dismissNotification, addNotification } = useNotifications()
   const speakRef = useRef<((text: string) => Promise<void>)>(async () => {})
@@ -38,7 +39,7 @@ export default function App() {
       const assistantMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.reply || 'I am here, sir.', timestamp: Date.now() }
       setMessages(prev => [...prev, assistantMsg])
 
-      if ((source === 'voice' || mode === 'voice')) {
+      if (source === 'voice' || mode === 'voice') {
         await speakRef.current(data.reply || 'I am here, sir.')
       }
 
@@ -48,12 +49,25 @@ export default function App() {
     } catch {
       const fallback: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Connection to the mainframe is unstable.', timestamp: Date.now() }
       setMessages(prev => [...prev, fallback])
-      if ((source === 'voice' || mode === 'voice')) {
+      if (source === 'voice' || mode === 'voice') {
         await speakRef.current('Connection to the mainframe is unstable.')
       }
     }
     setIsTyping(false)
   }, [mode, addNotification])
+
+  // Auto-turn: after speaking ends in conversation mode, start listening again
+  useEffect(() => {
+    if (conversationMode && !isSpeaking && !isTyping && !isListening && mode === 'voice') {
+      const timeout = setTimeout(() => startListening(), 800)
+      return () => clearTimeout(timeout)
+    }
+  }, [isSpeaking, isTyping, isListening, conversationMode, mode, startListening])
+
+  const handleInterrupt = useCallback(() => {
+    stopSpeaking()
+    setTimeout(() => startListening(), 200)
+  }, [stopSpeaking, startListening])
 
   const handleApproval = useCallback((notif: Notification, approved: boolean) => {
     dismissNotification(notif.id)
@@ -74,7 +88,13 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen bg-jarvis-bg text-jarvis-text flex flex-col overflow-hidden select-none">
-      <StatusBar mode={mode} onToggleMode={() => setMode(m => m === 'voice' ? 'chat' : 'voice')} isConnected={true} />
+      <StatusBar 
+        mode={mode} 
+        onToggleMode={() => setMode(m => m === 'voice' ? 'chat' : 'voice')} 
+        isConnected={true}
+        conversationMode={conversationMode}
+        onToggleConversation={() => setConversationMode(c => !c)}
+      />
 
       <div className="flex-1 relative">
         {mode === 'voice' ? (
@@ -87,6 +107,9 @@ export default function App() {
             useManualInput={useManualInput}
             setUseManualInput={setUseManualInput}
             onManualSubmit={(text) => handleUserMessage(text, 'text')}
+            conversationMode={conversationMode}
+            onInterrupt={handleInterrupt}
+            messages={messages}
             onTap={() => isListening ? stopListening() : startListening()}
           />
         ) : (

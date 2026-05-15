@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import type { Message } from '../types'
 
 interface VoiceCoreProps {
   isListening: boolean
@@ -10,10 +11,26 @@ interface VoiceCoreProps {
   useManualInput: boolean
   setUseManualInput: (v: boolean) => void
   onManualSubmit: (text: string) => void
+  conversationMode?: boolean
+  onInterrupt?: () => void
+  messages?: Message[]
   onTap: () => void
 }
 
-export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error, useManualInput, setUseManualInput, onManualSubmit, onTap }: VoiceCoreProps) {
+export function VoiceCore({ 
+  isListening, 
+  isSpeaking, 
+  isTyping, 
+  transcript, 
+  error, 
+  useManualInput, 
+  setUseManualInput, 
+  onManualSubmit,
+  conversationMode,
+  onInterrupt,
+  messages = [],
+  onTap 
+}: VoiceCoreProps) {
   const state = isListening ? 'listening' : isSpeaking ? 'speaking' : isTyping ? 'thinking' : 'idle'
 
   const colors = {
@@ -69,12 +86,21 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error
         >
           JARVIS Voice Assistant
         </motion.h1>
+        {conversationMode && (
+          <motion.span 
+            className="text-[10px] text-jarvis-cyan/70 tracking-[0.2em]"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            LIVE CONVERSATION MODE
+          </motion.span>
+        )}
       </div>
 
       {/* Command text box */}
       <div className="relative mb-3 z-10">
         <div className="flex items-center gap-2 bg-jarvis-panel/80 border border-jarvis-border rounded-xl px-4 py-2 min-w-[260px] sm:min-w-[340px]">
-          <span className="text-xs text-jarvis-text-dim">Comands, {transcript || '...'}</span>
+          <span className="text-xs text-jarvis-text-dim">{transcript || '...'}</span>
           <motion.span
             className="w-0.5 h-4 bg-jarvis-cyan"
             animate={{ opacity: [1, 0] }}
@@ -85,7 +111,7 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error
       </div>
 
       {/* Buttons */}
-      <div className="flex gap-3 mb-5 z-10">
+      <div className="flex gap-3 mb-5 z-10 flex-wrap justify-center">
         <button className="gradient-border gradient-border-glow px-4 py-2 text-xs text-white tracking-wider hover:bg-white/5 transition">
           All Commands
         </button>
@@ -95,6 +121,14 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error
         >
           {isListening ? 'Stop Listening' : 'Start Listening'}
         </button>
+        {isSpeaking && onInterrupt && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onInterrupt() }}
+            className="gradient-border gradient-border-glow px-4 py-2 text-xs text-jarvis-urgent tracking-wider hover:bg-white/5 transition animate-pulse"
+          >
+            Interrupt
+          </button>
+        )}
         {!hasNativeSTT && (
           <button
             onClick={() => setUseManualInput(!useManualInput)}
@@ -274,6 +308,27 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error
         </div>
       )}
 
+      {/* Conversation transcript */}
+      {conversationMode && messages.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="z-10 mt-4 w-full max-w-[400px] px-4"
+        >
+          <div className="bg-jarvis-panel/60 backdrop-blur-sm border border-jarvis-border/30 rounded-xl p-3 max-h-[120px] overflow-y-auto">
+            <span className="text-[10px] tracking-[0.2em] text-jarvis-text-dim/50 block mb-2">CONVERSATION</span>
+            {messages.slice(-4).map((msg) => (
+              <div key={msg.id} className="text-[11px] mb-1">
+                <span className={msg.role === 'user' ? 'text-jarvis-cyan' : msg.role === 'assistant' ? 'text-jarvis-success' : 'text-jarvis-warn'}>
+                  {msg.role === 'user' ? 'YOU: ' : msg.role === 'assistant' ? 'JARVIS: ' : 'SYSTEM: '}
+                </span>
+                <span className="text-jarvis-text/80">{msg.content.slice(0, 60)}{msg.content.length > 60 ? '...' : ''}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Error message */}
       {error && (
         <motion.div
@@ -287,7 +342,7 @@ export function VoiceCore({ isListening, isSpeaking, isTyping, transcript, error
 
       {/* Bottom prompt */}
       <p className="mt-2 text-[10px] text-jarvis-text-dim/40 tracking-[0.2em] uppercase">
-        {isListening ? 'Tap to terminate' : "Say 'Hello Jarvis'"}
+        {isListening ? 'Tap to terminate' : isSpeaking ? 'Tap orb to interrupt' : conversationMode ? 'Live mode active' : "Say 'Hello Jarvis'"}
       </p>
 
       {/* Bottom nav dock */}

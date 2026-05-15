@@ -1,12 +1,14 @@
-import { Mic, MessageSquare } from 'lucide-react'
+import { Mic, MessageSquare, Radio } from 'lucide-react'
 
 interface Props {
   mode: 'voice' | 'chat'
   onToggleMode: () => void
   isConnected: boolean
+  conversationMode?: boolean
+  onToggleConversation?: () => void
 }
 
-export function StatusBar({ mode, onToggleMode, isConnected }: Props) {
+export function StatusBar({ mode, onToggleMode, isConnected, conversationMode, onToggleConversation }: Props) {
   const now = new Date()
   const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   const date = now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
@@ -21,14 +23,30 @@ export function StatusBar({ mode, onToggleMode, isConnected }: Props) {
         </div>
       </div>
 
-      <span className="text-xs sm:text-sm font-light text-jarvis-text font-mono">{time}</span>
+      <div className="flex items-center gap-2">
+        {mode === 'voice' && onToggleConversation && (
+          <button
+            onClick={onToggleConversation}
+            className={`p-2 sm:p-2.5 rounded-xl border transition active:scale-90 ${
+              conversationMode 
+                ? 'bg-jarvis-cyan/20 border-jarvis-cyan text-jarvis-cyan' 
+                : 'bg-jarvis-panel border-jarvis-border/50 text-jarvis-text-dim hover:text-jarvis-cyan'
+            }`}
+            title="Live Conversation Mode"
+          >
+            <Radio className="w-4 h-4" />
+          </button>
+        )}
 
-      <button
-        onClick={onToggleMode}
-        className="p-2 sm:p-2.5 rounded-xl bg-jarvis-panel border border-jarvis-border/50 text-jarvis-cyan active:scale-90 transition hover:border-jarvis-cyan/50"
-      >
-        {mode === 'voice' ? <MessageSquare className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-      </button>
+        <span className="text-xs sm:text-sm font-light text-jarvis-text font-mono">{time}</span>
+
+        <button
+          onClick={onToggleMode}
+          className="p-2 sm:p-2.5 rounded-xl bg-jarvis-panel border border-jarvis-border/50 text-jarvis-cyan active:scale-90 transition hover:border-jarvis-cyan/50"
+        >
+          {mode === 'voice' ? <MessageSquare className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </button>
+      </div>
     </div>
   )
 }

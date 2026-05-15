@@ -18,6 +18,8 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
 
+  const voiceId = import.meta.env.VITE_ELEVENLABS_VOICE_ID || 'Q7IOSFX7VG3cnK4eU8Z4'
+
   // Check browser support
   const hasNativeSTT = typeof window !== 'undefined' && 
     ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
@@ -174,7 +176,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voiceId: 'Q7IOSFX7VG3cnK4eU8Z4' }),
+        body: JSON.stringify({ text, voiceId }),
       })
 
       if (res.ok && res.headers.get('content-type')?.includes('audio')) {
@@ -196,7 +198,7 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
       utter.onend = () => setIsSpeaking(false)
       speechSynthesis.speak(utter)
     }
-  }, [onSpeakingStart, onSpeakingEnd])
+  }, [onSpeakingStart, onSpeakingEnd, voiceId])
 
   const stopSpeaking = useCallback(() => {
     currentAudioRef.current?.pause()
