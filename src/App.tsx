@@ -103,18 +103,25 @@ export default function App() {
     setMessages(prev => [...prev, userMsg])
     setIsTyping(true)
 
-    const taskType = detectTaskType(text)
-    const taskId = createTask(taskType, text)
+    // Only create task cards for action commands, not casual chat
+    const isActionCommand = detectTaskType(text) !== 'default'
+    let taskId: string | null = null
+    let stepInterval: any = null
 
-    const stepInterval = setInterval(() => {
-      const task = tasks.find(t => t.id === taskId)
-      if (task) {
-        const currentStep = task.steps.findIndex(s => s.status === 'in_progress')
-        if (currentStep >= 0 && currentStep < task.steps.length - 1) {
-          updateTaskStep(taskId, currentStep, 'completed')
+    if (isActionCommand) {
+      const taskType = detectTaskType(text)
+      taskId = createTask(taskType, text)
+
+      stepInterval = setInterval(() => {
+        const task = tasks.find(t => t.id === taskId)
+        if (task) {
+          const currentStep = task.steps.findIndex(s => s.status === 'in_progress')
+          if (currentStep >= 0 && currentStep < task.steps.length - 1) {
+            updateTaskStep(taskId!, currentStep, 'completed')
+          }
         }
-      }
-    }, 1500)
+      }, 1500)
+    }
 
     try {
       const res = await fetch('/api/chat', {
@@ -126,8 +133,8 @@ export default function App() {
       const assistantMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.reply || 'I am here, sir.', timestamp: Date.now() }
       setMessages(prev => [...prev, assistantMsg])
 
-      clearInterval(stepInterval)
-      completeTask(taskId, true)
+      if (stepInterval) clearInterval(stepInterval)
+      if (taskId) completeTask(taskId, true)
 
       if (source === 'voice' || mode === 'voice') {
         if (isCallActive) {
@@ -141,8 +148,8 @@ export default function App() {
         addNotification(data.notification)
       }
     } catch {
-      clearInterval(stepInterval)
-      completeTask(taskId, false)
+      if (stepInterval) clearInterval(stepInterval)
+      if (taskId) completeTask(taskId, false)
       const fallback: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: 'Connection to the mainframe is unstable.', timestamp: Date.now() }
       setMessages(prev => [...prev, fallback])
       if (source === 'voice' || mode === 'voice') {
