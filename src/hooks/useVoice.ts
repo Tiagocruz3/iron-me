@@ -107,6 +107,9 @@ export function useVoice({ onTranscript, onSpeakingStart, onSpeakingEnd }: UseVo
         setTranscript(final)
         onTranscript(final)
         playSound('stop')
+        // Auto-stop listening after final result
+        isListeningRef.current = false
+        try { rec.stop() } catch {}
       } else {
         setTranscript(interim)
       }
