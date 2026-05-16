@@ -1,12 +1,48 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Mic, Plus, Square, Sparkles } from 'lucide-react'
+import { Send, Mic, Plus, Sparkles } from 'lucide-react'
 import type { Message } from '../types'
+import { CodeBlock } from './CodeBlock'
 
 interface Props {
   messages: Message[]
   isTyping: boolean
   onSend: (text: string) => void
+}
+
+// Parse message content to extract code blocks and text
+function parseContent(content: string) {
+  const parts: Array<{ type: 'text' | 'code'; content: string; language?: string; filename?: string }> = []
+  const codeBlockRegex = /```(\w+)?\s*(?:filename:\s*([^\n]+))?\n?([\s\S]*?)```/g
+  let lastIndex = 0
+  let match
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    // Add text before code block
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', content: content.slice(lastIndex, match.index) })
+    }
+
+    // Add code block
+    const language = match[1] || 'text'
+    const filename = match[2] || undefined
+    const code = match[3].trim()
+    parts.push({ type: 'code', content: code, language, filename })
+
+    lastIndex = match.index + match[0].length
+  }
+
+  // Add remaining text
+  if (lastIndex < content.length) {
+    parts.push({ type: 'text', content: content.slice(lastIndex) })
+  }
+
+  // If no code blocks found, return the whole content as text
+  if (parts.length === 0) {
+    parts.push({ type: 'text', content })
+  }
+
+  return parts
 }
 
 export function ChatPanel({ messages, isTyping, onSend }: Props) {
@@ -57,7 +93,7 @@ export function ChatPanel({ messages, isTyping, onSend }: Props) {
               )}
               
               <div
-                className={`max-w-[82%] px-4 py-3 text-[15px] leading-relaxed ${
+                className={`max-w-[82%] ${
                   msg.role === 'user'
                     ? 'bg-cyan-500/15 text-white rounded-3xl rounded-tr-md ml-8 border border-cyan-500/20'
                     : msg.role === 'system'
@@ -65,7 +101,29 @@ export function ChatPanel({ messages, isTyping, onSend }: Props) {
                     : 'bg-white/5 text-white/90 rounded-3xl rounded-tl-md mr-8 border border-white/10'
                 }`}
               >
-                {msg.content}
+                {msg.role === 'assistant' ? (
+                  <div className="px-4 py-3">
+                    {parseContent(msg.content).map((part, i) => (
+                      part.type === 'code' ? (
+                        <CodeBlock
+                          key={i}
+                          code={part.content}
+                          language={part.language}
+                          filename={part.filename}
+                          typing={i === parseContent(msg.content).length - 1 && isTyping}
+                        />
+                      ) : (
+                        <div key={i} className="text-[15px] leading-relaxed whitespace-pre-wrap">
+                          {part.content}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-3 text-[15px] leading-relaxed">
+                    {msg.content}
+                  </div>
+                )}
               </div>
 
               {msg.role === 'user' && (
